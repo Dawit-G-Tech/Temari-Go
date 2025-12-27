@@ -1,0 +1,68 @@
+{
+  "auth": {
+    "signIn": {
+      "title": "Welcome Back",
+      "subtitle": "Login to your account",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "signInButton": "Sign In",
+      "orContinueWith": "Or continue with",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign Up",
+      "emailPlaceholder": "Enter your email",
+      "passwordPlaceholder": "********",
+      "loginFailed": "Login failed"
+    },
+    "signUp": {
+      "title": "Let's get you started",
+      "subtitle": "Create your account",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "signUpButton": "Sign Up",
+      "orContinueWith": "Or continue with",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "namePlaceholder": "Jhon Doe",
+      "emailPlaceholder": "Enter your email",
+      "passwordPlaceholder": "*********",
+      "passwordMismatch": "Passwords do not match",
+      "nameRequired": "Name is Required",
+      "passwordRequired": "Password is Required",
+      "confirmPasswordRequired": "Confirm Password is Required",
+      "registrationFailed": "Registration failed"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send a reset link.",
+      "email": "Email",
+      "emailPlaceholder": "m@gmail.com",
+      "sendButton": "Send reset link",
+      "sending": "Sending...",
+      "orContinueWith": "Or continue with",
+      "rememberPassword": "Already remember your password?",
+      "signIn": "Sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Enter and confirm your new password to finish resetting it.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "passwordPlaceholder": "********",
+      "resetButton": "Reset password",
+      "resetting": "Resetting...",
+      "rememberedPassword": "Remembered your password?",
+      "signIn": "Sign in",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordsDontMatch": "Passwords do not match",
+      "invalidToken": "Invalid or missing reset token."
+    },
+    "common": {
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "agreeTerms": "By clicking continue, you agree to our"
+    }
+  }
+}

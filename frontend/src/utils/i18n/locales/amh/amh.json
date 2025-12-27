@@ -1,0 +1,68 @@
+{
+  "auth": {
+    "signIn": {
+      "title": "እንኳን ደህና መጡ",
+      "subtitle": "ወደ መለያዎ ይግቡ",
+      "email": "ኢሜይል",
+      "password": "የይለፍ ቃል",
+      "forgotPassword": "የይለፍ ቃልዎን ረሳችሁ?",
+      "signInButton": "ግባ",
+      "orContinueWith": "ወይም በ",
+      "noAccount": "መለያ አይኖርዎትም?",
+      "signUp": "ይመዝግቡ",
+      "emailPlaceholder": "ኢሜይልዎን ያስገቡ",
+      "passwordPlaceholder": "********",
+      "loginFailed": "መግቢያው አልተሳካም"
+    },
+    "signUp": {
+      "title": "እንጀምር",
+      "subtitle": "መለያዎን ይፍጠሩ",
+      "name": "ስም",
+      "email": "ኢሜይል",
+      "password": "የይለፍ ቃል",
+      "confirmPassword": "የይለፍ ቃሉን ያረጋግጡ",
+      "signUpButton": "ይመዝግቡ",
+      "orContinueWith": "ወይም በ",
+      "haveAccount": "አስቀድመው መለያ አለዎት?",
+      "signIn": "ግባ",
+      "namePlaceholder": "ምንም ስም",
+      "emailPlaceholder": "ኢሜይልዎን ያስገቡ",
+      "passwordPlaceholder": "*********",
+      "passwordMismatch": "የይለፍ ቃላት አይመጣጠኑም",
+      "nameRequired": "ስም ያስፈልጋል",
+      "passwordRequired": "የይለፍ ቃል ያስፈልጋል",
+      "confirmPasswordRequired": "የይለፍ ቃሉን ማረጋገጥ ያስፈልጋል",
+      "registrationFailed": "ምዝገባው አልተሳካም"
+    },
+    "forgotPassword": {
+      "title": "የይለፍ ቃልዎን ይቀይሩ",
+      "subtitle": "ኢሜይልዎን ያስገቡ እና የማረሚያ አድራሻ እንላካለን።",
+      "email": "ኢሜይል",
+      "emailPlaceholder": "m@gmail.com",
+      "sendButton": "የማረሚያ አድራሻ ላክ",
+      "sending": "ይላካል...",
+      "orContinueWith": "ወይም በ",
+      "rememberPassword": "የይለፍ ቃልዎን ተጠይቀዋል?",
+      "signIn": "ግባ"
+    },
+    "resetPassword": {
+      "title": "አዲስ የይለፍ ቃል ይፍቀዱ",
+      "subtitle": "አዲሱን የይለፍ ቃልዎን ያስገቡ እና ያረጋግጡ።",
+      "newPassword": "አዲስ የይለፍ ቃል",
+      "confirmPassword": "የይለፍ ቃሉን ያረጋግጡ",
+      "passwordPlaceholder": "********",
+      "resetButton": "የይለፍ ቃል መለወጥ",
+      "resetting": "ይቀይራል...",
+      "rememberedPassword": "የይለፍ ቃልዎን ተጠይቀዋል?",
+      "signIn": "ግባ",
+      "passwordMinLength": "የይለፍ ቃሉ ቢያንስ 8 ቁምፊዎች መሆን አለበት",
+      "passwordsDontMatch": "የይለፍ ቃላት አይመጣጠኑም",
+      "invalidToken": "የማይሰራ ወይም የጠፋ የማረሚያ ምልክት።"
+    },
+    "common": {
+      "termsOfService": "የአገልግሎት ውሎች",
+      "privacyPolicy": "የግላዊነት ፖሊሲ",
+      "agreeTerms": "በመቀጠል በጠቅላላ ፣ እኛን ተስማምተዋል"
+    }
+  }
+}
