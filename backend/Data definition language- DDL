@@ -1,0 +1,180 @@
+-- Enum Types for Constrained Values
+CREATE TYPE user_role AS ENUM ('admin', 'parent', 'driver');
+CREATE TYPE attendance_type AS ENUM ('boarding', 'exiting');
+CREATE TYPE payment_status AS ENUM ('pending', 'completed', 'failed');
+CREATE TYPE geofence_type AS ENUM ('school', 'home');
+
+-- Users Table: Handles all users (admins, parents, drivers) with role-based access
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,  -- Hashed password for security
+    full_name VARCHAR(100) NOT NULL,
+    phone_number VARCHAR(20),
+    role user_role NOT NULL,
+    language_preference VARCHAR(10) DEFAULT 'en' CHECK (language_preference IN ('en', 'am')),  -- English or Amharic
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Students Table: Core entities tracked by the system
+CREATE TABLE students (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    grade VARCHAR(20),
+    parent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,  -- Linked to parent
+    home_latitude DECIMAL(10, 8),  -- For geofencing
+    home_longitude DECIMAL(11, 8),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Buses Table: Vehicles with assigned drivers
+CREATE TABLE buses (
+    id SERIAL PRIMARY KEY,
+    bus_number VARCHAR(20) UNIQUE NOT NULL,  -- e.g., 'BUS-01'
+    driver_id INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- Nullable if driver reassigned
+    capacity INTEGER DEFAULT 50,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- RFID Cards Table: Assigned to students for attendance
+CREATE TABLE rfid_cards (
+    id SERIAL PRIMARY KEY,
+    rfid_tag VARCHAR(50) UNIQUE NOT NULL,  -- Unique RFID identifier
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    active BOOLEAN DEFAULT TRUE
+);
+
+-- Geofences Table: Defines zones for auto-detecting boarding/exiting
+CREATE TABLE geofences (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,  -- e.g., 'School Main Gate' or 'Student Home - ID123'
+    type geofence_type NOT NULL,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    radius_meters INTEGER NOT NULL DEFAULT 50,  -- Geofence boundary in meters
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,  -- For home geofences; NULL for school
+    bus_id INTEGER REFERENCES buses(id) ON DELETE CASCADE,  -- Associated bus route
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Attendance Table: Logs boarding/exiting events
+CREATE TABLE attendance (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    bus_id INTEGER NOT NULL REFERENCES buses(id) ON DELETE CASCADE,
+    rfid_card_id INTEGER REFERENCES rfid_cards(id) ON DELETE SET NULL,
+    type attendance_type NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    geofence_id INTEGER REFERENCES geofences(id),  -- Linked to detected geofence
+    manual_override BOOLEAN DEFAULT FALSE,  -- If driver manually entered
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Locations Table: GPS logs for real-time tracking
+CREATE TABLE locations (
+    id SERIAL PRIMARY KEY,
+    bus_id INTEGER NOT NULL REFERENCES buses(id) ON DELETE CASCADE,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    speed DECIMAL(5, 2),  -- In km/h for behavior analysis
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Alcohol Tests Table: Driver sobriety checks
+CREATE TABLE alcohol_tests (
+    id SERIAL PRIMARY KEY,
+    driver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    bus_id INTEGER REFERENCES buses(id) ON DELETE SET NULL,
+    alcohol_level DECIMAL(5, 2) NOT NULL,  -- e.g., 0.05 mg/L
+    passed BOOLEAN NOT NULL,  -- True if below threshold
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),  -- Location of test
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Driver Feedback Table: Parental ratings for driver behavior
+CREATE TABLE driver_feedback (
+    id SERIAL PRIMARY KEY,
+    driver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER CHECK (rating BETWEEN 1 AND 5),  -- Star rating
+    comment TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Driver Ratings Table: Aggregated scores (computed periodically)
+CREATE TABLE driver_ratings (
+    id SERIAL PRIMARY KEY,
+    driver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    safety_compliance_score DECIMAL(5, 2) DEFAULT 0,  -- 40% weight
+    parental_feedback_score DECIMAL(5, 2) DEFAULT 0,  -- 35% weight
+    operational_performance_score DECIMAL(5, 2) DEFAULT 0,  -- 25% weight
+    overall_score DECIMAL(5, 2) DEFAULT 0,  -- Weighted average
+    missed_pickups INTEGER DEFAULT 0,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Payments Table: Transport fee transactions via Chapa
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    parent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2) NOT NULL,
+    status payment_status NOT NULL DEFAULT 'pending',
+    chapa_transaction_id VARCHAR(50) UNIQUE,  -- From Chapa gateway
+    payment_method VARCHAR(20),  -- e.g., 'telebirr', 'cbe_birr'
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notifications Table: Logs for FCM pushes (e.g., boarding alerts)
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,  -- Recipient
+    type VARCHAR(50) NOT NULL,  -- e.g., 'boarding', 'alcohol_alert', 'payment_confirmation'
+    message TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Routes Table: Bus routes with student assignments
+CREATE TABLE routes (
+    id SERIAL PRIMARY KEY,
+    bus_id INTEGER NOT NULL REFERENCES buses(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,  -- e.g., 'Route A - Morning'
+    start_time TIME,
+    end_time TIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Route Assignments Table: Many-to-many for students to routes
+CREATE TABLE route_assignments (
+    id SERIAL PRIMARY KEY,
+    route_id INTEGER NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    pickup_latitude DECIMAL(10, 8),
+    pickup_longitude DECIMAL(11, 8),
+    UNIQUE (route_id, student_id)
+);
+
+-- Indexes for Performance
+CREATE INDEX idx_attendance_timestamp ON attendance(timestamp);
+CREATE INDEX idx_locations_bus_timestamp ON locations(bus_id, timestamp);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_students_parent ON students(parent_id);
+CREATE INDEX idx_payments_status ON payments(status);

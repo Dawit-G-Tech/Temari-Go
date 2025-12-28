@@ -7,6 +7,7 @@ import passport from './config/passport';
 import { errorMiddleware } from './middlewares/error.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import paymentRoutes from './routes/payment.routes';
 
 dotenv.config();
 
@@ -44,6 +45,7 @@ app.get('/api/health', (req, res) => {
 // Add auth and user routes directly
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.use(errorMiddleware);
 
