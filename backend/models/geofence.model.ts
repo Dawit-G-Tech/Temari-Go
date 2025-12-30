@@ -17,7 +17,7 @@ export class Geofence extends Model {
   name!: string;
 
   @Column({
-    type: DataType.ENUM('school', 'home'),
+    type: DataType.STRING,
     allowNull: false,
   })
   type!: 'school' | 'home';

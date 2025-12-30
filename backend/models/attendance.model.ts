@@ -26,7 +26,7 @@ export class Attendance extends Model {
   rfid_card_id?: number;
 
   @Column({
-    type: DataType.ENUM('boarding', 'exiting'),
+    type: DataType.STRING,
     allowNull: false,
   })
   type!: 'boarding' | 'exiting';

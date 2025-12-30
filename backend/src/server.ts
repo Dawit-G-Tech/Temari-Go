@@ -10,9 +10,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
     
-    // Sync database (create tables if they don't exist)
-    await sequelize.sync({ alter: true });
-    console.log('Database synchronized.');
+    // Note: We use migrations for schema changes, so we don't sync/alter here
+    // Run migrations with: npx sequelize-cli db:migrate
+    // await sequelize.sync({ alter: true });
     
     app.listen(PORT, () => {
       console.log(`Backend running on http://localhost:${PORT}`);

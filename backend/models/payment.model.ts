@@ -23,7 +23,7 @@ export class Payment extends Model {
   amount!: number;
 
   @Column({
-    type: DataType.ENUM('pending', 'completed', 'failed'),
+    type: DataType.STRING,
     allowNull: false,
     defaultValue: 'pending',
   })
