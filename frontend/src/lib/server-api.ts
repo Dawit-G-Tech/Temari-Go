@@ -44,9 +44,15 @@ export async function serverFetch<T>(
     },
     cache,
     next,
+    // Include cookies in server-to-server requests
+    credentials: 'include',
   });
 
   if (!response.ok) {
+    // Don't throw for 401 - just means user isn't authenticated
+    if (response.status === 401) {
+      throw new Error('UNAUTHORIZED');
+    }
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || 'Request failed');
   }

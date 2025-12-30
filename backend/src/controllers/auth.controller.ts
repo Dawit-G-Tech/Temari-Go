@@ -68,7 +68,12 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 		// Try to get refresh token from cookie first, then from body
 		const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 		if (!refreshToken) {
-			return next({ status: 400, code: 'VALIDATION_ERROR', message: 'refreshToken is required.' });
+			// Return 401 instead of 400 - this is an auth issue, not validation
+			return res.status(401).json({
+				success: false,
+				code: 'UNAUTHORIZED',
+				message: 'No refresh token available.',
+			});
 		}
 		const result = await AuthService.refresh(refreshToken);
 		

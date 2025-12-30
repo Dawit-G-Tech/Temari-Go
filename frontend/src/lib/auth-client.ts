@@ -74,8 +74,12 @@ class AuthClient {
       this.accessToken = response.accessToken;
       this.saveToStorage();
       return response.accessToken;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
+    } catch (error: any) {
+      // Silent fail - no refresh token available or expired
+      // Don't log as error if it's just a missing token (401)
+      if (error?.message && !error.message.includes('401') && !error.message.includes('UNAUTHORIZED')) {
+        console.error('Token refresh failed:', error);
+      }
       this.clearAuthData();
       return null;
     }
@@ -89,19 +93,27 @@ class AuthClient {
       this.user = user;
       this.saveToStorage();
       return user;
-    } catch (error) {
-      // Try to refresh token and retry
-      const newToken = await this.refreshAccessToken();
-      if (newToken) {
-        try {
-          const user = await authAPI.getMe(newToken);
-          this.user = user;
-          this.saveToStorage();
-          return user;
-        } catch (retryError) {
-          console.error('Failed to get user after token refresh:', retryError);
-          this.clearAuthData();
-          return null;
+    } catch (error: any) {
+      // If it's a 401, user is just not authenticated - this is normal
+      if (error?.message?.includes('401') || error?.message?.includes('UNAUTHORIZED')) {
+        this.clearAuthData();
+        return null;
+      }
+      
+      // Try to refresh token and retry (only if we have a refresh token)
+      if (this.refreshToken) {
+        const newToken = await this.refreshAccessToken();
+        if (newToken) {
+          try {
+            const user = await authAPI.getMe(newToken);
+            this.user = user;
+            this.saveToStorage();
+            return user;
+          } catch (retryError) {
+            // Silent fail - user just isn't authenticated
+            this.clearAuthData();
+            return null;
+          }
         }
       }
       return null;

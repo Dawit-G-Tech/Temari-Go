@@ -1,5 +1,6 @@
 import { db } from '../../models';
 const { Attendance, RFIDCard, Student, Bus, Geofence } = db;
+import type { Bus as BusModel } from '../../models/bus.model';
 import { Op } from 'sequelize';
 import { findMatchingGeofence, type GeofenceData } from '../utils/geofence';
 import { NotificationService } from './notification.service';
@@ -62,7 +63,7 @@ export class AttendanceService {
 		}
 
 		// 2. Find bus by vehicle_id or bus_id
-		let bus: Bus | null = null;
+		let bus: BusModel | null = null;
 		if (input.bus_id) {
 			bus = await Bus.findByPk(input.bus_id);
 		} else if (input.vehicle_id) {
