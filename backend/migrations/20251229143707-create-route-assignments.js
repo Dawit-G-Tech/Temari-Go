@@ -38,7 +38,6 @@ module.exports = {
       },
     });
 
-    // Add unique constraint for route_assignments
     await queryInterface.addIndex('route_assignments', ['route_id', 'student_id'], {
       unique: true,
       name: 'route_assignments_route_id_student_id_unique',

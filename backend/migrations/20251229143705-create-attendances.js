@@ -3,21 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('payments', {
+    await queryInterface.createTable('attendance', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
-      },
-      parent_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
       },
       student_id: {
         type: Sequelize.INTEGER,
@@ -28,23 +19,49 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
-      amount: {
-        type: Sequelize.DECIMAL(10, 2),
+      bus_id: {
+        type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: 'buses',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
-      chapa_transaction_id: {
-        type: Sequelize.STRING(50),
+      rfid_card_id: {
+        type: Sequelize.INTEGER,
         allowNull: true,
-        unique: true,
-      },
-      payment_method: {
-        type: Sequelize.STRING(20),
-        allowNull: true,
+        references: {
+          model: 'rfid_cards',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
       },
       timestamp: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+      latitude: {
+        type: Sequelize.DECIMAL(10, 8),
+        allowNull: true,
+      },
+      longitude: {
+        type: Sequelize.DECIMAL(11, 8),
+        allowNull: true,
+      },
+      geofence_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'geofences',
+          key: 'id',
+        },
+      },
+      manual_override: {
+        type: Sequelize.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
       },
       created_at: {
         allowNull: false,
@@ -53,13 +70,12 @@ module.exports = {
       },
     });
 
-    // Add status column with enum constraint for payments
     await queryInterface.sequelize.query(
-      `ALTER TABLE payments ADD COLUMN status payment_status NOT NULL DEFAULT 'pending'`
+      `ALTER TABLE attendance ADD COLUMN type attendance_type NOT NULL DEFAULT 'boarding'`
     );
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('payments');
+    await queryInterface.dropTable('attendance');
   }
 };

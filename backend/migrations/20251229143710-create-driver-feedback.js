@@ -3,65 +3,43 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('attendance', {
+    await queryInterface.createTable('driver_feedback', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      student_id: {
+      driver_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'students',
+          model: 'Users',
           key: 'id',
         },
         onDelete: 'CASCADE',
       },
-      bus_id: {
+      parent_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'buses',
+          model: 'Users',
           key: 'id',
         },
         onDelete: 'CASCADE',
       },
-      rfid_card_id: {
+      rating: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        references: {
-          model: 'rfid_cards',
-          key: 'id',
-        },
-        onDelete: 'SET NULL',
+      },
+      comment: {
+        type: Sequelize.TEXT,
+        allowNull: true,
       },
       timestamp: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
-      },
-      latitude: {
-        type: Sequelize.DECIMAL(10, 8),
-        allowNull: true,
-      },
-      longitude: {
-        type: Sequelize.DECIMAL(11, 8),
-        allowNull: true,
-      },
-      geofence_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'geofences',
-          key: 'id',
-        },
-      },
-      manual_override: {
-        type: Sequelize.BOOLEAN,
-        allowNull: true,
-        defaultValue: false,
       },
       created_at: {
         allowNull: false,
@@ -70,13 +48,15 @@ module.exports = {
       },
     });
 
-    // Add type column with enum constraint for attendance
     await queryInterface.sequelize.query(
-      `ALTER TABLE attendance ADD COLUMN type attendance_type NOT NULL DEFAULT 'boarding'`
+      `ALTER TABLE driver_feedback ADD CONSTRAINT check_rating CHECK (rating BETWEEN 1 AND 5)`
     );
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('attendance');
+    await queryInterface.sequelize.query(
+      `ALTER TABLE driver_feedback DROP CONSTRAINT IF EXISTS check_rating`
+    );
+    await queryInterface.dropTable('driver_feedback');
   }
 };

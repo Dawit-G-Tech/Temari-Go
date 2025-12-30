@@ -3,7 +3,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create performance indexes
     await queryInterface.addIndex('attendance', ['timestamp'], {
       name: 'idx_attendance_timestamp',
     });
@@ -33,4 +32,3 @@ module.exports = {
     await queryInterface.removeIndex('attendance', 'idx_attendance_timestamp');
   }
 };
-

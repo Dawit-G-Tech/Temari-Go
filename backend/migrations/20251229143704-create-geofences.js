@@ -57,7 +57,6 @@ module.exports = {
       },
     });
 
-    // Add type column with enum constraint for geofences
     await queryInterface.sequelize.query(
       `ALTER TABLE geofences ADD COLUMN type geofence_type NOT NULL`
     );

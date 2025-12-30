@@ -3,21 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('driver_feedback', {
+    await queryInterface.createTable('payments', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
-      },
-      driver_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
       },
       parent_id: {
         type: Sequelize.INTEGER,
@@ -28,12 +19,26 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
-      rating: {
+      student_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
+        references: {
+          model: 'students',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
-      comment: {
-        type: Sequelize.TEXT,
+      amount: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false,
+      },
+      chapa_transaction_id: {
+        type: Sequelize.STRING(50),
+        allowNull: true,
+        unique: true,
+      },
+      payment_method: {
+        type: Sequelize.STRING(20),
         allowNull: true,
       },
       timestamp: {
@@ -48,16 +53,12 @@ module.exports = {
       },
     });
 
-    // Add check constraint for rating
     await queryInterface.sequelize.query(
-      `ALTER TABLE driver_feedback ADD CONSTRAINT check_rating CHECK (rating BETWEEN 1 AND 5)`
+      `ALTER TABLE payments ADD COLUMN status payment_status NOT NULL DEFAULT 'pending'`
     );
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query(
-      `ALTER TABLE driver_feedback DROP CONSTRAINT IF EXISTS check_rating`
-    );
-    await queryInterface.dropTable('driver_feedback');
+    await queryInterface.dropTable('payments');
   }
 };
