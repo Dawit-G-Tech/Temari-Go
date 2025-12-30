@@ -5,6 +5,30 @@ import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { db } from '../../models';
 const { RefreshToken } = db;
 
+// Helper function to set auth cookies
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string, accessTokenExpiresIn: string) {
+	const isProduction = process.env.NODE_ENV === 'production';
+	const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days for refresh token
+	
+	// Set access token cookie (short-lived, HTTP-only)
+	res.cookie('accessToken', accessToken, {
+		httpOnly: true,
+		secure: isProduction,
+		sameSite: 'lax',
+		maxAge: 15 * 60 * 1000, // 15 minutes
+		path: '/',
+	});
+
+	// Set refresh token cookie (long-lived, HTTP-only)
+	res.cookie('refreshToken', refreshToken, {
+		httpOnly: true,
+		secure: isProduction,
+		sameSite: 'lax',
+		maxAge,
+		path: '/',
+	});
+}
+
 export const register = async (req: Request, res: Response, next: NextFunction) => {
 	try {
 		const { name, email, password } = req.body || {};
@@ -12,6 +36,10 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 			return next({ status: 400, code: 'VALIDATION_ERROR', message: 'Name, email and password are required.' });
 		}
 		const result = await AuthService.register({ name, email, password });
+		
+		// Set cookies
+		setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken, result.tokens.accessTokenExpiresIn);
+		
 		return res.status(201).json({ success: true, data: result });
 	} catch (err) {
 		return next(err);
@@ -25,6 +53,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 			return next({ status: 400, code: 'VALIDATION_ERROR', message: 'Email and password are required.' });
 		}
 		const result = await AuthService.login({ email, password });
+		
+		// Set cookies
+		setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken, result.tokens.accessTokenExpiresIn);
+		
 		return res.json({ success: true, data: result });
 	} catch (err) {
 		return next(err);
@@ -33,11 +65,23 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 export const refresh = async (req: Request, res: Response, next: NextFunction) => {
 	try {
-		const { refreshToken } = req.body || {};
+		// Try to get refresh token from cookie first, then from body
+		const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 		if (!refreshToken) {
 			return next({ status: 400, code: 'VALIDATION_ERROR', message: 'refreshToken is required.' });
 		}
 		const result = await AuthService.refresh(refreshToken);
+		
+		// Update access token cookie
+		const isProduction = process.env.NODE_ENV === 'production';
+		res.cookie('accessToken', result.accessToken, {
+			httpOnly: true,
+			secure: isProduction,
+			sameSite: 'lax',
+			maxAge: 15 * 60 * 1000, // 15 minutes
+			path: '/',
+		});
+		
 		return res.json({ success: true, data: result });
 	} catch (err) {
 		return next(err);
@@ -46,13 +90,21 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
 	try {
-		const { refreshToken } = req.body || {};
-		if (!refreshToken) {
-			return next({ status: 400, code: 'VALIDATION_ERROR', message: 'refreshToken is required.' });
+		// Try to get refresh token from cookie first, then from body
+		const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+		if (refreshToken) {
+			await AuthService.logout(refreshToken);
 		}
-		await AuthService.logout(refreshToken);
+		
+		// Clear cookies
+		res.clearCookie('accessToken', { path: '/' });
+		res.clearCookie('refreshToken', { path: '/' });
+		
 		return res.json({ success: true, data: { loggedOut: true } });
 	} catch (err) {
+		// Clear cookies even if logout fails
+		res.clearCookie('accessToken', { path: '/' });
+		res.clearCookie('refreshToken', { path: '/' });
 		return next(err);
 	}
 };
@@ -121,9 +173,12 @@ export const googleCallback = [
 				userId: user.id 
 			});
 
-			// Redirect to frontend with tokens
+			// Set cookies
+			setAuthCookies(res, accessToken, refreshToken, accessTokenExpiresIn);
+
+			// Redirect to frontend (cookies are set, no need to pass in URL)
 			const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-			const redirectUrl = `${frontendUrl}/callback?accessToken=${accessToken}&refreshToken=${refreshToken}&user=${encodeURIComponent(JSON.stringify({
+			const redirectUrl = `${frontendUrl}/callback?user=${encodeURIComponent(JSON.stringify({
 				id: String(user.id),
 				name: user.name,
 				email: user.email,

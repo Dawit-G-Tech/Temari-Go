@@ -21,13 +21,12 @@ export default function AuthCallback() {
         return;
       }
 
-      if (accessToken && refreshToken && userParam) {
+      // Cookies are now set by the backend, so we only need user data
+      if (userParam) {
         try {
           const user = JSON.parse(decodeURIComponent(userParam));
           
-          // Store tokens and user data in localStorage
-          localStorage.setItem('accessToken', accessToken);
-          localStorage.setItem('refreshToken', refreshToken);
+          // Store user data in localStorage (tokens are in cookies)
           localStorage.setItem('user', JSON.stringify(user));
           
           // Refresh the auth client state
@@ -40,7 +39,7 @@ export default function AuthCallback() {
           router.push('/sign-in?error=authentication_failed');
         }
       } else {
-        router.push('/sign-in?error=missing_tokens');
+        router.push('/sign-in?error=missing_user_data');
       }
     };
 

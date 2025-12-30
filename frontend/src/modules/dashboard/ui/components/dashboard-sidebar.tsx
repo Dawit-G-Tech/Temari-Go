@@ -21,6 +21,7 @@ import {
   LibraryBigIcon,
   Mic,
   PaletteIcon,
+  ClipboardCheckIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,6 +46,11 @@ const configurationItems = [
     title: "Bus",
     url: "/bus",
     icon: PaletteIcon,
+  },
+  {
+    title: "Attendance",
+    url: "/attendance",
+    icon: ClipboardCheckIcon,
   },
   {
     title: "Integrations",
