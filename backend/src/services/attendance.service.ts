@@ -520,7 +520,17 @@ export class AttendanceService {
 		const endOfDay = new Date(targetDate);
 		endOfDay.setHours(23, 59, 59, 999);
 
-		// Get all attendance records for today
+		// Verify bus exists
+		const bus = await Bus.findByPk(busId);
+		if (!bus) {
+			throw {
+				status: 404,
+				code: 'BUS_NOT_FOUND',
+				message: 'Bus not found.',
+			};
+		}
+
+		// Get all attendance records for the target date
 		const attendances = await Attendance.findAll({
 			where: {
 				bus_id: busId,
@@ -546,17 +556,72 @@ export class AttendanceService {
 			}
 		});
 
-		const onboardStudents: number[] = [];
+		// Get onboard student IDs
+		const onboardStudentIds: number[] = [];
 		onboardMap.forEach((count, studentId) => {
 			if (count > 0) {
-				onboardStudents.push(studentId);
+				onboardStudentIds.push(studentId);
 			}
 		});
 
+		// Get detailed information for onboard students
+		const onboardStudents = await Student.findAll({
+			where: {
+				id: {
+					[Op.in]: onboardStudentIds,
+				},
+			},
+			attributes: ['id', 'full_name', 'grade'],
+			order: [['full_name', 'ASC']],
+		});
+
+		// Get total students assigned to this bus (via routes)
+		const routes = await Route.findAll({
+			where: { bus_id: busId },
+		});
+
+		const routeIds = routes.map(route => route.id);
+		const totalAssignedStudents = routeIds.length > 0 
+			? await RouteAssignment.count({
+				where: {
+					route_id: {
+						[Op.in]: routeIds,
+					},
+				},
+				distinct: true,
+				col: 'student_id',
+			})
+			: 0;
+
 		return {
-			onboardCount: onboardStudents.length,
-			onboardStudents,
-			attendances,
+			bus: {
+				id: bus.id,
+				bus_number: bus.bus_number,
+			},
+			date: targetDate.toISOString().split('T')[0],
+			statistics: {
+				totalAssignedStudents,
+				currentOnboardCount: onboardStudents.length,
+			},
+			onboardStudents: onboardStudents.map(student => ({
+				id: student.id,
+				full_name: student.full_name,
+				grade: student.grade,
+			})),
+			attendances: attendances.map(attendance => ({
+				id: attendance.id,
+				student_id: attendance.student_id,
+				type: attendance.type,
+				timestamp: attendance.timestamp,
+				latitude: attendance.latitude,
+				longitude: attendance.longitude,
+				manual_override: attendance.manual_override,
+				student: attendance.student ? {
+					id: attendance.student.id,
+					full_name: attendance.student.full_name,
+					grade: attendance.student.grade,
+				} : null,
+			})),
 		};
 	}
 

@@ -11,6 +11,8 @@ import paymentRoutes from './routes/payment.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import studentRoutes from './routes/student.routes';
 import busRoutes from './routes/bus.routes';
+import locationRoutes from './routes/location.routes';
+import geofenceRoutes from './routes/geofence.routes';
 
 dotenv.config();
 
@@ -52,6 +54,8 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/buses', busRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/geofences', geofenceRoutes);
 
 app.use(errorMiddleware);
 

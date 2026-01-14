@@ -95,6 +95,7 @@ export class NotificationService {
 			payment_confirmation: 'Payment Confirmed',
 			missed_bus: 'Missed Bus Alert',
 			emergency: 'Emergency Alert',
+			speed_violation: 'Speed Violation Alert',
 		};
 		return titles[type] || 'Notification';
 	}
