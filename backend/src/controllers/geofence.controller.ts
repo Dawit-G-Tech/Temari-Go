@@ -73,11 +73,23 @@ export const createGeofence = async (req: Request, res: Response) => {
  * Get all geofences with optional filters
  * GET /api/geofences
  * Admin/Driver access
+ * 
+ * Special handling: If vehicle_id is provided, returns compressed format for microcontroller
  */
 export const getAllGeofences = async (req: Request, res: Response) => {
 	try {
-		const { type, bus_id, student_id } = req.query;
+		const { type, bus_id, student_id, vehicle_id } = req.query;
 
+		// If vehicle_id is provided, use microcontroller endpoint
+		if (vehicle_id) {
+			const result = await GeofenceService.getMicrocontrollerGeofences(vehicle_id as string);
+			return res.status(200).json({
+				success: true,
+				data: result,
+			});
+		}
+
+		// Otherwise, use standard filtering
 		const filters: GeofenceFilters = {};
 
 		if (type && (type === 'school' || type === 'home')) {
@@ -100,6 +112,14 @@ export const getAllGeofences = async (req: Request, res: Response) => {
 		});
 	} catch (error: any) {
 		console.error('Get geofences error:', error);
+
+		if (error.status && error.code) {
+			return res.status(error.status).json({
+				success: false,
+				code: error.code,
+				message: error.message,
+			});
+		}
 
 		return res.status(500).json({
 			success: false,

@@ -92,6 +92,7 @@ export class NotificationService {
 			boarding: 'Student Boarded Bus',
 			exiting: 'Student Exited Bus',
 			alcohol_alert: 'Driver Safety Alert',
+			critical_motion_alert: 'CRITICAL: Bus Movement After Failed Test',
 			payment_confirmation: 'Payment Confirmed',
 			missed_bus: 'Missed Bus Alert',
 			emergency: 'Emergency Alert',

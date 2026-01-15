@@ -1,5 +1,5 @@
 import { db } from '../../models';
-const { Geofence, Student, Bus } = db;
+const { Geofence, Student, Bus, Route, RouteAssignment } = db;
 import { Op } from 'sequelize';
 import { validateCoordinates } from '../utils/google-maps';
 
@@ -328,5 +328,103 @@ export class GeofenceService {
 		await geofence.destroy();
 
 		return { success: true, message: 'Geofence deleted successfully.' };
+	}
+
+	/**
+	 * Get compressed geofences for microcontroller
+	 * Returns optimized format for microcontroller storage
+	 * Includes school geofence + all student home geofences for the bus route
+	 */
+	static async getMicrocontrollerGeofences(vehicle_id: string) {
+		// 1. Find bus by vehicle_id (bus_number)
+		const bus = await Bus.findOne({
+			where: { bus_number: vehicle_id },
+		});
+
+		if (!bus) {
+			throw {
+				status: 404,
+				code: 'BUS_NOT_FOUND',
+				message: `Bus with vehicle_id "${vehicle_id}" not found.`,
+			};
+		}
+
+		// 2. Get all routes for this bus
+		const routes = await Route.findAll({
+			where: { bus_id: bus.id },
+			include: [
+				{
+					model: RouteAssignment,
+				},
+			],
+		});
+
+		// 3. Collect all student IDs assigned to this bus's routes
+		const studentIds: number[] = [];
+		routes.forEach((route) => {
+			if (route.routeAssignments) {
+				route.routeAssignments.forEach((assignment) => {
+					if (assignment.student_id) {
+						studentIds.push(assignment.student_id);
+					}
+				});
+			}
+		});
+
+		// Remove duplicates
+		const uniqueStudentIds = [...new Set(studentIds)];
+
+		// 4. Get school geofence for this bus
+		const schoolGeofence = await Geofence.findOne({
+			where: {
+				type: 'school',
+				bus_id: bus.id,
+			},
+		});
+
+		// 5. Get all home geofences for students on this bus's routes
+		const homeGeofences = uniqueStudentIds.length > 0
+			? await Geofence.findAll({
+					where: {
+						type: 'home',
+						bus_id: bus.id,
+						student_id: {
+							[Op.in]: uniqueStudentIds,
+						},
+					},
+			  })
+			: [];
+
+		// 6. Format as compressed array for microcontroller
+		// Format: [[lat, lng, radius, type], ...]
+		// type: 0 = school, 1 = home
+		const compressedGeofences: Array<[number, number, number, number]> = [];
+
+		// Add school geofence if exists
+		if (schoolGeofence) {
+			compressedGeofences.push([
+				Number(schoolGeofence.latitude),
+				Number(schoolGeofence.longitude),
+				schoolGeofence.radius_meters || 50,
+				0, // 0 = school
+			]);
+		}
+
+		// Add all home geofences
+		homeGeofences.forEach((geofence) => {
+			compressedGeofences.push([
+				Number(geofence.latitude),
+				Number(geofence.longitude),
+				geofence.radius_meters || 50,
+				1, // 1 = home
+			]);
+		});
+
+		return {
+			vehicle_id: bus.bus_number,
+			bus_id: bus.id,
+			geofences: compressedGeofences,
+			count: compressedGeofences.length,
+		};
 	}
 }

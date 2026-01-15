@@ -13,6 +13,7 @@ import studentRoutes from './routes/student.routes';
 import busRoutes from './routes/bus.routes';
 import locationRoutes from './routes/location.routes';
 import geofenceRoutes from './routes/geofence.routes';
+import alcoholTestRoutes from './routes/alcoholTest.routes';
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use('/api/students', studentRoutes);
 app.use('/api/buses', busRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/geofences', geofenceRoutes);
+app.use('/api/alcohol-tests', alcoholTestRoutes);
 
 app.use(errorMiddleware);
 
