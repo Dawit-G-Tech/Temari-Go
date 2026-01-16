@@ -1,5 +1,6 @@
 import { db } from '../../models';
 const { AlcoholTest, Bus, User, Role } = db;
+import { Op } from 'sequelize';
 import { NotificationService } from './notification.service';
 
 export interface AlcoholTestInput {
@@ -209,12 +210,31 @@ export class AlcoholTestService {
 
 	/**
 	 * Get alcohol test history for a driver
+	 * Supports filtering by date range
 	 */
-	static async getDriverAlcoholTests(driverId: number, limit?: number) {
+	static async getDriverAlcoholTests(
+		driverId: number,
+		startDate?: Date,
+		endDate?: Date,
+		limit?: number
+	) {
+		const where: any = {
+			driver_id: driverId,
+		};
+
+		// Add date range filtering if provided
+		if (startDate || endDate) {
+			where.timestamp = {};
+			if (startDate) {
+				where.timestamp[Op.gte] = startDate;
+			}
+			if (endDate) {
+				where.timestamp[Op.lte] = endDate;
+			}
+		}
+
 		return await AlcoholTest.findAll({
-			where: {
-				driver_id: driverId,
-			},
+			where,
 			include: [
 				{
 					model: Bus,

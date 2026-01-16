@@ -15,8 +15,8 @@ router.use(authMiddleware);
 // POST /api/alcohol-tests - Submit alcohol test from microcontroller
 router.post('/', submitAlcoholTest);
 
-// GET /api/alcohol-tests/driver/:driverId - Get alcohol test history for a driver (Admin/Driver access)
-router.get('/driver/:driverId', authorize('admin', 'driver'), getDriverAlcoholTests);
+// GET /api/alcohol-tests/driver/:driverId - Get alcohol test history for a driver (Admin access only)
+router.get('/driver/:driverId', authorize('admin'), getDriverAlcoholTests);
 
 // GET /api/alcohol-tests/bus/:busId - Get alcohol test history for a bus (Admin/Driver access)
 router.get('/bus/:busId', authorize('admin', 'driver'), getBusAlcoholTests);

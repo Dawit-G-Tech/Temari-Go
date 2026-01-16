@@ -96,14 +96,52 @@ export const submitAlcoholTest = async (req: Request, res: Response) => {
 /**
  * Get alcohol test history for a driver
  * GET /api/alcohol-tests/driver/:driverId
+ * Query params: startDate, endDate, limit
  */
 export const getDriverAlcoholTests = async (req: Request, res: Response) => {
 	try {
 		const { driverId } = req.params;
-		const { limit } = req.query;
+		const { startDate, endDate, limit } = req.query;
+
+		// Validate date parameters if provided
+		let startDateObj: Date | undefined;
+		let endDateObj: Date | undefined;
+
+		if (startDate) {
+			startDateObj = new Date(startDate as string);
+			if (isNaN(startDateObj.getTime())) {
+				return res.status(400).json({
+					success: false,
+					code: 'INVALID_START_DATE',
+					message: 'Invalid startDate format. Use ISO 8601 format (e.g., 2024-01-01T00:00:00Z).',
+				});
+			}
+		}
+
+		if (endDate) {
+			endDateObj = new Date(endDate as string);
+			if (isNaN(endDateObj.getTime())) {
+				return res.status(400).json({
+					success: false,
+					code: 'INVALID_END_DATE',
+					message: 'Invalid endDate format. Use ISO 8601 format (e.g., 2024-01-01T00:00:00Z).',
+				});
+			}
+		}
+
+		// Validate date range
+		if (startDateObj && endDateObj && startDateObj > endDateObj) {
+			return res.status(400).json({
+				success: false,
+				code: 'INVALID_DATE_RANGE',
+				message: 'startDate must be before or equal to endDate.',
+			});
+		}
 
 		const tests = await AlcoholTestService.getDriverAlcoholTests(
 			Number(driverId),
+			startDateObj,
+			endDateObj,
 			limit ? Number(limit) : undefined
 		);
 

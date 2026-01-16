@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import app from './app';
 import { sequelize } from '../models';
+import { startDriverRatingScheduler } from './scheduler/driverRating.scheduler';
 
 const PORT = process.env.PORT || 4000;
 
@@ -13,6 +14,9 @@ const startServer = async () => {
     // Note: We use migrations for schema changes, so we don't sync/alter here
     // Run migrations with: npx sequelize-cli db:migrate
     // await sequelize.sync({ alter: true });
+    
+    // Start scheduled tasks
+    startDriverRatingScheduler();
     
     app.listen(PORT, () => {
       console.log(`Backend running on http://localhost:${PORT}`);
