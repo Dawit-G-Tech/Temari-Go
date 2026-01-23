@@ -37,6 +37,9 @@ export class User extends Model {
   @Column({ type: DataType.STRING(10), allowNull: true, defaultValue: 'en' })
   language_preference?: string;
 
+  @Column({ type: DataType.TEXT, allowNull: true })
+  fcm_token?: string;
+
   @Column({ type: DataType.STRING, allowNull: true })
   googleId?: string;
 

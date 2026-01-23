@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/hooks/use-auth";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { FCMTestButton } from "@/components/fcm-test-button";
 
 function HomeContent() {
   const {t} = useTranslation();
@@ -53,6 +54,10 @@ function HomeContent() {
         })}</Button>
 
         <Button size="sm">{t("welcomeMessage")}</Button>
+      </div>
+
+      <div className="mt-8">
+        <FCMTestButton />
       </div>
     </div>
   )

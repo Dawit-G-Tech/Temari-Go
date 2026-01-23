@@ -7,6 +7,14 @@ export class UserService {
 		if (!user) throw { status: 404, code: 'USER_NOT_FOUND', message: 'User not found.' };
 		return { id: String(user.id), name: user.name, email: user.email, role: user.role?.name || 'user' };
 	}
+
+	static async updateFCMToken(userId: string, fcmToken: string) {
+		const user = await User.findByPk(userId);
+		if (!user) throw { status: 404, code: 'USER_NOT_FOUND', message: 'User not found.' };
+		
+		await user.update({ fcm_token: fcmToken });
+		return { success: true, message: 'FCM token updated successfully' };
+	}
 }
 
 

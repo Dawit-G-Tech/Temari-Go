@@ -16,6 +16,7 @@ import geofenceRoutes from './routes/geofence.routes';
 import alcoholTestRoutes from './routes/alcoholTest.routes';
 import driverFeedbackRoutes from './routes/driverFeedback.routes';
 import driverRatingRoutes from './routes/driverRating.routes';
+import notificationRoutes from './routes/notification.routes';
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use('/api/geofences', geofenceRoutes);
 app.use('/api/alcohol-tests', alcoholTestRoutes);
 app.use('/api/driver-feedback', driverFeedbackRoutes);
 app.use('/api/driver-ratings', driverRatingRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(errorMiddleware);
 

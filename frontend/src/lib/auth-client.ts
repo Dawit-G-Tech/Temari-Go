@@ -210,6 +210,7 @@ export const {
   getCurrentUser,
   isAuthenticated,
   getMe,
+  getAccessToken,
   refreshAccessToken,
   refreshAuthState,
   forgotPassword,
