@@ -8,6 +8,7 @@ import { errorMiddleware } from './middlewares/error.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import paymentRoutes from './routes/payment.routes';
+import paymentsRoutes from './routes/payments.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import studentRoutes from './routes/student.routes';
 import busRoutes from './routes/bus.routes';
@@ -55,6 +56,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/buses', busRoutes);
