@@ -153,8 +153,8 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
     // Extract transaction data from webhook payload
     const txRef = event.tx_ref;
     const status = event.status;
-    const eventType = event.event; // e.g., "charge.success", "charge.failed"
-    const reference = event.reference; // Chapa's reference
+    const eventType = event.event; 
+    const chapaReference = event.reference; // Chapa's internal transaction ID 
     const paymentMethod = event.payment_method;
 
     if (!txRef) {
@@ -259,15 +259,20 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
     }
 
     // Update payment status
-    // Use reference (Chapa's transaction ID) if different from tx_ref
-    const finalTransactionId = reference && reference !== txRef ? reference : payment.chapa_transaction_id;
-
+    // IMPORTANT: Keep tx_ref in chapa_transaction_id (don't overwrite with Chapa's reference)
     await PaymentService.updatePaymentStatus(
       payment.id,
       paymentStatus,
-      finalTransactionId !== payment.chapa_transaction_id ? finalTransactionId : undefined,
+      undefined, // Don't update chapa_transaction_id - preserve the original tx_ref
       paymentMethod
     );
+
+    // Log Chapa's reference if different (for debugging/reference)
+    if (chapaReference && chapaReference !== txRef) {
+      console.log(
+        `Payment ${payment.id}: tx_ref="${txRef}", Chapa reference="${chapaReference}"`
+      );
+    }
 
     // Reload payment to get updated data
     const updatedPayment = await PaymentService.getPaymentById(payment.id);
