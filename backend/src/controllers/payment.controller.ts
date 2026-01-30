@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
+import crypto from 'crypto';
 import { PaymentService } from '../services/payment.service';
 
 const CHAPA_URL = process.env.CHAPA_URL || 'https://api.chapa.co/v1/transaction/initialize';
 const CHAPA_AUTH = process.env.CHAPA_AUTH || '';
+const CHAPA_WEBHOOK_SECRET = process.env.CHAPA_WEBHOOK_SECRET || '';
 
 function makeConfig(): { headers?: Record<string, string> } {
   return CHAPA_AUTH ? { headers: { Authorization: `Bearer ${CHAPA_AUTH}` } } : {};
@@ -32,7 +34,6 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
       });
     }
 
-    const CALLBACK_URL = process.env.CHAPA_CALLBACK_BASE || 'http://localhost:4000/api/payment/callback/';
     const RETURN_URL = process.env.CHAPA_RETURN_URL || 'http://localhost:3000/payment-success';
 
     // Generate unique transaction reference
@@ -43,7 +44,7 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
       parent_id: parseInt(parent_id, 10),
       student_id: parseInt(student_id, 10),
       amount: parseFloat(amount),
-      chapa_transaction_id: txRef, // Store tx_ref initially, will be updated with actual transaction_id from callback
+      chapa_transaction_id: txRef, // Store tx_ref initially, will be updated with actual transaction_id from webhook
       status: 'pending',
     });
 
@@ -55,7 +56,6 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
       first_name: first_name || 'First',
       last_name: last_name || 'Last',
       tx_ref: txRef,
-      callback_url: CALLBACK_URL + txRef,
       return_url: RETURN_URL,
     };
 
@@ -93,64 +93,77 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
 };
 
 /**
- * Chapa webhook callback handler
- * POST /api/payment/callback/:txRef
- * This endpoint is called by Chapa when payment status changes
+ * Verify Chapa webhook signature
  */
-export const paymentCallback = async (req: Request, res: Response, next: NextFunction) => {
+function verifyChapaSignature(req: Request, secret: string): boolean {
+  if (!secret) {
+    console.warn('CHAPA_WEBHOOK_SECRET not set, skipping signature verification');
+    return true; // Allow if secret not configured (for development)
+  }
+
+  const chapaSignature = req.headers['chapa-signature'] as string;
+  const xChapaSignature = req.headers['x-chapa-signature'] as string;
+
+  if (!chapaSignature && !xChapaSignature) {
+    console.warn('No Chapa signature headers found');
+    return false;
+  }
+
+  // Create HMAC SHA256 hash of the request body
+  const payload = JSON.stringify(req.body);
+  const hash = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+  // Verify against either header (Chapa may send either)
+  const isValid =
+    (chapaSignature !== undefined && hash === chapaSignature) ||
+    (xChapaSignature !== undefined && hash === xChapaSignature);
+
+  if (!isValid) {
+    console.error('Invalid Chapa webhook signature');
+  }
+
+  return isValid;
+}
+
+/**
+ * Chapa webhook handler
+ * POST /api/payment/webhook
+ * This endpoint is called by Chapa when payment events occur
+ * Configure this URL in your Chapa dashboard: Settings > Webhooks
+ */
+export const paymentWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const txRef = req.params.txRef;
+    // Verify webhook signature (if secret is configured)
+    if (!verifyChapaSignature(req, CHAPA_WEBHOOK_SECRET)) {
+      return res.status(401).json({
+        success: false,
+        code: 'INVALID_SIGNATURE',
+        message: 'Invalid webhook signature',
+      });
+    }
+
+    const event = req.body;
+
+    // Only process transaction events (ignore payout events)
+    if (event.type && event.type === 'Payout') {
+      console.log('Ignoring payout event:', event.event);
+      return res.status(200).json({ received: true });
+    }
+
+    // Extract transaction data from webhook payload
+    const txRef = event.tx_ref;
+    const status = event.status;
+    const eventType = event.event; // e.g., "charge.success", "charge.failed"
+    const reference = event.reference; // Chapa's reference
+    const paymentMethod = event.payment_method;
 
     if (!txRef) {
+      console.error('Webhook missing tx_ref:', event);
       return res.status(400).json({
         success: false,
         code: 'MISSING_TX_REF',
-        message: 'Transaction reference is required',
+        message: 'Transaction reference (tx_ref) is required',
       });
-    }
-
-    // Verify payment status with Chapa
-    if (!CHAPA_AUTH) {
-      console.error('CHAPA_AUTH is not set');
-      return res.status(500).json({
-        success: false,
-        code: 'MISSING_CONFIG',
-        message: 'Missing CHAPA_AUTH environment variable',
-      });
-    }
-
-    const verifyUrl = `https://api.chapa.co/v1/transaction/verify/${txRef}`;
-    const cfg = makeConfig();
-
-    let chapaResponse;
-    try {
-      chapaResponse = await axios.get(verifyUrl, cfg);
-    } catch (verifyErr: any) {
-      console.error('Chapa verification error:', verifyErr.response?.data || verifyErr.message);
-      // Still try to process if we have payment data in request body (webhook)
-      if (!req.body || !req.body.status) {
-        return res.status(400).json({
-          success: false,
-          code: 'VERIFICATION_FAILED',
-          message: 'Failed to verify payment with Chapa',
-        });
-      }
-    }
-
-    // Extract payment data from Chapa response or webhook body
-    const paymentData = chapaResponse?.data?.data || req.body;
-    // Chapa returns tx_ref in the response, and may also return a transaction_id
-    const chapaTxRef = paymentData.tx_ref || txRef;
-    const chapaTransactionId = paymentData.id || paymentData.transaction_id || chapaTxRef;
-    const status = paymentData.status || req.body.status;
-    const paymentMethod = paymentData.payment_method || req.body.payment_method;
-
-    // Determine payment status
-    let paymentStatus: 'pending' | 'completed' | 'failed' = 'pending';
-    if (status === 'success' || status === 'successful' || status === 'completed') {
-      paymentStatus = 'completed';
-    } else if (status === 'failed' || status === 'cancelled' || status === 'canceled') {
-      paymentStatus = 'failed';
     }
 
     // Find payment by tx_ref (which we stored as chapa_transaction_id during initialization)
@@ -158,16 +171,97 @@ export const paymentCallback = async (req: Request, res: Response, next: NextFun
 
     if (!payment) {
       console.error(`Payment not found for tx_ref: ${txRef}`);
+      // Return 200 to acknowledge receipt (idempotent - don't retry)
       return res.status(200).json({
-        success: false,
+        received: true,
         message: 'Payment not found for the given transaction reference',
       });
     }
 
+    // Check if already processed (idempotency check)
+    // If payment is already completed/failed and webhook says the same, just acknowledge
+    if (
+      (payment.status === 'completed' && status === 'success') ||
+      (payment.status === 'failed' && (status === 'failed' || status === 'cancelled'))
+    ) {
+      console.log(`Payment ${payment.id} already processed with status ${payment.status}, acknowledging webhook`);
+      return res.status(200).json({
+        received: true,
+        message: 'Payment already processed',
+        payment_id: payment.id,
+        status: payment.status,
+      });
+    }
+
+    // Determine payment status from webhook
+    let paymentStatus: 'pending' | 'completed' | 'failed' = 'pending';
+    if (status === 'success' || eventType === 'charge.success') {
+      paymentStatus = 'completed';
+    } else if (status === 'failed' || status === 'cancelled' || eventType === 'charge.failed') {
+      paymentStatus = 'failed';
+    }
+
+    // Best Practice: Verify transaction with Chapa API before updating
+    // This ensures the webhook data matches what Chapa has on record
+    if (!CHAPA_AUTH) {
+      console.warn('CHAPA_AUTH not set, skipping API verification');
+    } else {
+      try {
+        const verifyUrl = `https://api.chapa.co/v1/transaction/verify/${txRef}`;
+        const cfg = makeConfig();
+        const verifyResponse = await axios.get(verifyUrl, cfg);
+        const verifiedData = verifyResponse.data?.data;
+
+        // Verify critical fields match
+        if (verifiedData) {
+          const verifiedStatus = verifiedData.status;
+          const verifiedAmount = parseFloat(verifiedData.amount || 0);
+          const verifiedTxRef = verifiedData.tx_ref;
+
+          // Check if status matches
+          if (verifiedStatus !== status) {
+            console.warn(
+              `Status mismatch: webhook says ${status}, API says ${verifiedStatus}. Using API status.`
+            );
+            if (verifiedStatus === 'success') {
+              paymentStatus = 'completed';
+            } else if (verifiedStatus === 'failed' || verifiedStatus === 'cancelled') {
+              paymentStatus = 'failed';
+            }
+          }
+
+          // Verify amount matches (critical security check)
+          if (Math.abs(verifiedAmount - parseFloat(payment.amount.toString())) > 0.01) {
+            console.error(
+              `Amount mismatch for payment ${payment.id}: webhook amount doesn't match stored amount`
+            );
+            // Don't update if amounts don't match - potential fraud
+            return res.status(200).json({
+              received: true,
+              message: 'Amount verification failed, payment not updated',
+            });
+          }
+
+          // Verify tx_ref matches
+          if (verifiedTxRef !== txRef) {
+            console.error(`tx_ref mismatch for payment ${payment.id}`);
+            return res.status(200).json({
+              received: true,
+              message: 'Transaction reference mismatch',
+            });
+          }
+        }
+      } catch (verifyErr: any) {
+        console.error('Error verifying transaction with Chapa API:', verifyErr.message);
+        // Continue processing webhook even if verification fails (network issues, etc.)
+        // But log it for investigation
+      }
+    }
+
     // Update payment status
-    // If Chapa returned a different transaction_id, update it
-    const finalTransactionId = chapaTransactionId !== txRef ? chapaTransactionId : payment.chapa_transaction_id;
-    
+    // Use reference (Chapa's transaction ID) if different from tx_ref
+    const finalTransactionId = reference && reference !== txRef ? reference : payment.chapa_transaction_id;
+
     await PaymentService.updatePaymentStatus(
       payment.id,
       paymentStatus,
@@ -178,28 +272,26 @@ export const paymentCallback = async (req: Request, res: Response, next: NextFun
     // Reload payment to get updated data
     const updatedPayment = await PaymentService.getPaymentById(payment.id);
 
-    // Return success response to Chapa
+    console.log(`Payment ${payment.id} updated via webhook: ${paymentStatus}`);
+
+    // Return 200 OK to acknowledge receipt (required by Chapa)
     res.status(200).json({
-      success: true,
-      message: 'Payment callback processed successfully',
-      data: {
-        payment_id: updatedPayment?.id,
-        status: updatedPayment?.status,
-        transaction_id: updatedPayment?.chapa_transaction_id,
-      },
+      received: true,
+      message: 'Webhook processed successfully',
+      payment_id: updatedPayment?.id,
+      status: updatedPayment?.status,
     });
   } catch (err: any) {
-    console.error('Payment callback error:', err);
-    // Still return 200 to Chapa to prevent retries if it's a data issue
-    if (err.message === 'Payment not found') {
-      return res.status(200).json({
-        success: false,
-        message: 'Payment not found, but callback received',
-      });
-    }
-    return next(err);
+    console.error('Payment webhook error:', err);
+    // Always return 200 to prevent Chapa from retrying
+    // Log error for investigation but don't fail the webhook
+    res.status(200).json({
+      received: true,
+      error: 'Error processing webhook',
+    });
   }
 };
+
 
 /**
  * Manual payment verification (for testing/admin use)
