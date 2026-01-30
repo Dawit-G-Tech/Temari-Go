@@ -28,7 +28,7 @@ function HomeContent() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Welcome to Auth App</h1>
+        <h1 className="text-2xl font-bold">Welcome Temari Go</h1>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
           {user && (
