@@ -25,6 +25,10 @@ export class RouteAssignment extends Model {
   @Column({ type: DataType.DECIMAL(11, 8), allowNull: true })
   pickup_longitude?: number;
 
+  /** Order of this stop in the optimized route (0-based). Null if not yet optimized. */
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  pickup_order?: number;
+
   @BelongsTo(() => Route)
   route!: Route;
 

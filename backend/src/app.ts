@@ -19,6 +19,8 @@ import driverFeedbackRoutes from './routes/driverFeedback.routes';
 import driverRatingRoutes from './routes/driverRating.routes';
 import notificationRoutes from './routes/notification.routes';
 import rfidCardRoutes from './routes/rfidCard.routes';
+import routeRoutes from './routes/route.routes';
+import routeAssignmentRoutes from './routes/routeAssignment.routes';
 
 dotenv.config();
 
@@ -68,6 +70,8 @@ app.use('/api/driver-feedback', driverFeedbackRoutes);
 app.use('/api/driver-ratings', driverRatingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid-cards', rfidCardRoutes);
+app.use('/api/routes', routeRoutes);
+app.use('/api/route-assignments', routeAssignmentRoutes);
 
 app.use(errorMiddleware);
 
