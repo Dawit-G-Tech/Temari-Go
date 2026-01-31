@@ -3,11 +3,20 @@ import { verifyAccessToken } from '../utils/jwt';
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
 	try {
+		// Try to get token from Authorization header first, then from cookie
+		let token: string | undefined;
+		
 		const header = req.headers['authorization'];
-		if (!header || !header.startsWith('Bearer ')) {
+		if (header && header.startsWith('Bearer ')) {
+			token = header.substring('Bearer '.length).trim();
+		} else if (req.cookies?.accessToken) {
+			token = req.cookies.accessToken;
+		}
+		
+		if (!token) {
 			return next({ status: 401, code: 'UNAUTHORIZED', message: 'Access denied.' });
 		}
-		const token = header.substring('Bearer '.length).trim();
+		
 		const payload = verifyAccessToken(token);
 		req.user = { id: payload.userId, email: payload.email, role: payload.role };
 		return next();

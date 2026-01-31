@@ -58,9 +58,7 @@ class AuthClient {
   // Logout user
   async logout(): Promise<void> {
     try {
-      if (this.refreshToken) {
-        await authAPI.logout(this.refreshToken);
-      }
+      await authAPI.logout(this.refreshToken || undefined);
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -70,17 +68,18 @@ class AuthClient {
 
   // Refresh access token
   async refreshAccessToken(): Promise<string | null> {
-    if (!this.refreshToken) {
-      return null;
-    }
-
     try {
-      const response = await authAPI.refreshToken(this.refreshToken);
+      // Try to refresh using cookie first, then fallback to stored token
+      const response = await authAPI.refreshToken(this.refreshToken || undefined);
       this.accessToken = response.accessToken;
       this.saveToStorage();
       return response.accessToken;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
+    } catch (error: any) {
+      // Silent fail - no refresh token available or expired
+      // Don't log as error if it's just a missing token (401)
+      if (error?.message && !error.message.includes('401') && !error.message.includes('UNAUTHORIZED')) {
+        console.error('Token refresh failed:', error);
+      }
       this.clearAuthData();
       return null;
     }
@@ -88,28 +87,33 @@ class AuthClient {
 
   // Get user info with token refresh if needed
   async getMe(): Promise<User | null> {
-    if (!this.accessToken) {
-      return null;
-    }
-
     try {
-      const user = await authAPI.getMe(this.accessToken);
+      // Try with cookie first (no token needed), then with stored token
+      const user = await authAPI.getMe(this.accessToken || undefined);
       this.user = user;
       this.saveToStorage();
       return user;
-    } catch (error) {
-      // Try to refresh token and retry
-      const newToken = await this.refreshAccessToken();
-      if (newToken) {
-        try {
-          const user = await authAPI.getMe(newToken);
-          this.user = user;
-          this.saveToStorage();
-          return user;
-        } catch (retryError) {
-          console.error('Failed to get user after token refresh:', retryError);
-          this.clearAuthData();
-          return null;
+    } catch (error: any) {
+      // If it's a 401, user is just not authenticated - this is normal
+      if (error?.message?.includes('401') || error?.message?.includes('UNAUTHORIZED')) {
+        this.clearAuthData();
+        return null;
+      }
+      
+      // Try to refresh token and retry (only if we have a refresh token)
+      if (this.refreshToken) {
+        const newToken = await this.refreshAccessToken();
+        if (newToken) {
+          try {
+            const user = await authAPI.getMe(newToken);
+            this.user = user;
+            this.saveToStorage();
+            return user;
+          } catch (retryError) {
+            // Silent fail - user just isn't authenticated
+            this.clearAuthData();
+            return null;
+          }
         }
       }
       return null;
@@ -119,6 +123,8 @@ class AuthClient {
   // Set authentication data
   private setAuthData(authResponse: AuthResponse): void {
     this.user = authResponse.user;
+    // Tokens are now in cookies, but we can still store them for backward compatibility
+    // and for cases where cookies might not be available
     this.accessToken = authResponse.tokens.accessToken;
     this.refreshToken = authResponse.tokens.refreshToken;
     this.saveToStorage();
@@ -127,9 +133,16 @@ class AuthClient {
   // Save to localStorage
   private saveToStorage(): void {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('accessToken', this.accessToken || '');
-      localStorage.setItem('refreshToken', this.refreshToken || '');
-      localStorage.setItem('user', JSON.stringify(this.user));
+      // Store tokens for backward compatibility (cookies are primary)
+      if (this.accessToken) {
+        localStorage.setItem('accessToken', this.accessToken);
+      }
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken);
+      }
+      if (this.user) {
+        localStorage.setItem('user', JSON.stringify(this.user));
+      }
     }
   }
 
@@ -149,9 +162,19 @@ class AuthClient {
   // Refresh authentication state from localStorage
   refreshAuthState(): void {
     if (typeof window !== 'undefined') {
+      // Try to get tokens from localStorage (for backward compatibility)
+      // But cookies are the primary source now
       this.accessToken = localStorage.getItem('accessToken');
       this.refreshToken = localStorage.getItem('refreshToken');
       this.user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+      
+      // If we have user but no tokens, try to get user from API (cookies will be used)
+      if (this.user && !this.accessToken) {
+        this.getMe().catch(() => {
+          // If getMe fails, clear user data
+          this.clearAuthData();
+        });
+      }
     }
   }
 
@@ -187,6 +210,7 @@ export const {
   getCurrentUser,
   isAuthenticated,
   getMe,
+  getAccessToken,
   refreshAccessToken,
   refreshAuthState,
   forgotPassword,

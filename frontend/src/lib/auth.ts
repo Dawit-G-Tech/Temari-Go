@@ -48,6 +48,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies
       body: JSON.stringify(credentials),
     });
 
@@ -66,6 +67,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies
       body: JSON.stringify(credentials),
     });
 
@@ -78,13 +80,14 @@ export const authAPI = {
     return result.data;
   },
 
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string; accessTokenExpiresIn: string }> {
+  async refreshToken(refreshToken?: string): Promise<{ accessToken: string; accessTokenExpiresIn: string }> {
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include', // Include cookies
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     });
 
     if (!response.ok) {
@@ -96,13 +99,14 @@ export const authAPI = {
     return result.data;
   },
 
-  async logout(refreshToken: string): Promise<void> {
+  async logout(refreshToken?: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include', // Include cookies
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     });
 
     if (!response.ok) {
@@ -111,13 +115,20 @@ export const authAPI = {
     }
   },
 
-  async getMe(accessToken: string): Promise<User> {
+  async getMe(accessToken?: string): Promise<User> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Use Authorization header if token provided, otherwise rely on cookies
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/user/me`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include', // Include cookies
     });
 
     if (!response.ok) {

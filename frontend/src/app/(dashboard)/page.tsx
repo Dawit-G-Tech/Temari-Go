@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/hooks/use-auth";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { FCMTestButton } from "@/components/fcm-test-button";
 
 function HomeContent() {
   const {t} = useTranslation();
@@ -27,7 +28,7 @@ function HomeContent() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Welcome to Auth App</h1>
+        <h1 className="text-2xl font-bold">Welcome Temari Go</h1>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
           {user && (
@@ -53,6 +54,10 @@ function HomeContent() {
         })}</Button>
 
         <Button size="sm">{t("welcomeMessage")}</Button>
+      </div>
+
+      <div className="mt-8">
+        <FCMTestButton />
       </div>
     </div>
   )

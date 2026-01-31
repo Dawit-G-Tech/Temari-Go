@@ -17,7 +17,7 @@ export class RefreshToken extends Model {
   expiryDate!: Date;
 
   @ForeignKey(() => User)
-  @Column
+  @Column({ type: DataType.INTEGER })
   userId!: number;
 
   @BelongsTo(() => User)

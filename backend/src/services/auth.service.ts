@@ -25,7 +25,7 @@ export class AuthService {
 		const existing = await User.findOne({ where: { email: input.email } });
 		if (existing) {
 			// Check if user is a social auth user
-			if (existing.provider && existing.password === 'social-auth-no-password') {
+			if (existing.provider && (!existing.password || existing.password === 'social-auth-no-password')) {
 				throw { status: 400, code: 'EMAIL_IN_USE_SOCIAL', message: 'This email is already registered with social authentication. Please use Google to sign in.' };
 			}
 			throw { status: 400, code: 'EMAIL_IN_USE', message: 'Email already in use.' };
@@ -53,9 +53,14 @@ export class AuthService {
 			throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' };
 		}
 		
-		// Check if user is a social auth user (has provider and default password)
-		if (user.provider && user.password === 'social-auth-no-password') {
+		// Check if user is a social auth user (has provider and default password or no password)
+		if (user.provider && (!user.password || user.password === 'social-auth-no-password')) {
 			throw { status: 401, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google or GitHub to sign in.' };
+		}
+		
+		// Check if user has a password set
+		if (!user.password) {
+			throw { status: 401, code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' };
 		}
 		
 		const ok = await comparePassword(input.password, user.password);
@@ -101,7 +106,7 @@ export class AuthService {
 		}
 
 		// Check if user is a social auth user
-		if (user.provider && user.password === 'social-auth-no-password') {
+		if (user.provider && (!user.password || user.password === 'social-auth-no-password')) {
 			throw { status: 400, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google or GitHub to sign in.' };
 		}
 

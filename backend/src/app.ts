@@ -8,6 +8,17 @@ import { errorMiddleware } from './middlewares/error.middleware';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import paymentRoutes from './routes/payment.routes';
+import paymentsRoutes from './routes/payments.routes';
+import attendanceRoutes from './routes/attendance.routes';
+import studentRoutes from './routes/student.routes';
+import busRoutes from './routes/bus.routes';
+import locationRoutes from './routes/location.routes';
+import geofenceRoutes from './routes/geofence.routes';
+import alcoholTestRoutes from './routes/alcoholTest.routes';
+import driverFeedbackRoutes from './routes/driverFeedback.routes';
+import driverRatingRoutes from './routes/driverRating.routes';
+import notificationRoutes from './routes/notification.routes';
+import rfidCardRoutes from './routes/rfidCard.routes';
 
 dotenv.config();
 
@@ -46,6 +57,17 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/buses', busRoutes);
+app.use('/api/locations', locationRoutes);
+app.use('/api/geofences', geofenceRoutes);
+app.use('/api/alcohol-tests', alcoholTestRoutes);
+app.use('/api/driver-feedback', driverFeedbackRoutes);
+app.use('/api/driver-ratings', driverRatingRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/rfid-cards', rfidCardRoutes);
 
 app.use(errorMiddleware);
 
