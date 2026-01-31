@@ -18,6 +18,7 @@ import alcoholTestRoutes from './routes/alcoholTest.routes';
 import driverFeedbackRoutes from './routes/driverFeedback.routes';
 import driverRatingRoutes from './routes/driverRating.routes';
 import notificationRoutes from './routes/notification.routes';
+import rfidCardRoutes from './routes/rfidCard.routes';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ app.use('/api/alcohol-tests', alcoholTestRoutes);
 app.use('/api/driver-feedback', driverFeedbackRoutes);
 app.use('/api/driver-ratings', driverRatingRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rfid-cards', rfidCardRoutes);
 
 app.use(errorMiddleware);
 
