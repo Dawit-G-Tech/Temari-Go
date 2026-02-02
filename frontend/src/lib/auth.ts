@@ -6,6 +6,16 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  phone_number?: string | null;
+  username?: string | null;
+  language_preference?: string | null;
+}
+
+export interface UpdateProfileInput {
+  name?: string;
+  phone_number?: string | null;
+  username?: string | null;
+  language_preference?: string | null;
 }
 
 export interface AuthTokens {
@@ -119,23 +129,42 @@ export const authAPI = {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
-    
-    // Use Authorization header if token provided, otherwise rely on cookies
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
-
     const response = await fetch(`${API_BASE_URL}/api/user/me`, {
       method: 'GET',
       headers,
-      credentials: 'include', // Include cookies
+      credentials: 'include',
     });
-
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to get user info');
     }
+    const result = await response.json();
+    return result.data;
+  },
 
+  async updateProfile(
+    input: UpdateProfileInput,
+    accessToken?: string
+  ): Promise<User> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    const response = await fetch(`${API_BASE_URL}/api/user/me`, {
+      method: 'PUT',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify(input),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update profile');
+    }
     const result = await response.json();
     return result.data;
   },

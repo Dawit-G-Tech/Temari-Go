@@ -1,6 +1,6 @@
 // Server-side API utilities for Next.js Server Components
 import { cookies } from 'next/headers';
-import { API_BASE_URL } from './auth';
+import { API_BASE_URL, type User } from './auth';
 
 export interface ServerApiOptions {
   cache?: RequestCache;
@@ -118,6 +118,19 @@ export async function getServerAttendance(filters?: {
   } catch (error) {
     console.error('Failed to fetch attendance on server:', error);
     return { total: 0, attendances: [] };
+  }
+}
+
+/**
+ * Get current user (server-side)
+ */
+export async function getServerUser(): Promise<User | null> {
+  try {
+    return await serverFetch<User>('/api/user/me', {
+      cache: 'no-store',
+    });
+  } catch (error) {
+    return null;
   }
 }
 

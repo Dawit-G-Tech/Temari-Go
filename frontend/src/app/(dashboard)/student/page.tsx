@@ -1,7 +1,6 @@
 import React from "react";
+import { StudentView } from "@/modules/student/views/student-view";
 
-const Page = () => {
-  return <div>Driver</div>;
-};
-
-export default Page;
+export default function StudentPage() {
+  return <StudentView />;
+}
