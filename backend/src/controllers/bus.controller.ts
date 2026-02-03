@@ -8,12 +8,13 @@ import { BusService } from '../services/bus.service';
  */
 export const createBus = async (req: Request, res: Response) => {
 	try {
-		const { bus_number, capacity, driver_id } = req.body;
+		const { bus_number, capacity, driver_id, school_id } = req.body;
 
 		const bus = await BusService.createBus({
 			bus_number,
 			capacity: capacity !== undefined ? Number(capacity) : undefined,
 			driver_id: driver_id !== undefined ? driver_id : undefined,
+			school_id: school_id !== undefined ? school_id : undefined,
 		});
 
 		return res.status(201).json({
@@ -114,12 +115,13 @@ export const getBusById = async (req: Request, res: Response) => {
 export const updateBus = async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const { bus_number, capacity, driver_id } = req.body;
+		const { bus_number, capacity, driver_id, school_id } = req.body;
 
 		const updateData: any = {};
 		if (bus_number !== undefined) updateData.bus_number = bus_number;
 		if (capacity !== undefined) updateData.capacity = Number(capacity);
 		if (driver_id !== undefined) updateData.driver_id = driver_id;
+		if (school_id !== undefined) updateData.school_id = school_id;
 
 		const bus = await BusService.updateBus(Number(id), updateData);
 

@@ -1,5 +1,5 @@
 import { db } from '../../models';
-const { Bus, User, Route, Role } = db;
+const { Bus, User, Route, Role, School } = db;
 import { LocationService } from './location.service';
 import { AttendanceService } from './attendance.service';
 
@@ -7,12 +7,14 @@ export interface CreateBusInput {
 	bus_number: string;
 	capacity?: number;
 	driver_id?: number | null;
+	school_id?: number | null;
 }
 
 export interface UpdateBusInput {
 	bus_number?: string;
 	capacity?: number;
 	driver_id?: number | null;
+	school_id?: number | null;
 }
 
 export class BusService {
@@ -20,7 +22,7 @@ export class BusService {
 	 * Create a new bus
 	 */
 	static async createBus(input: CreateBusInput) {
-		const { bus_number, capacity, driver_id } = input;
+		const { bus_number, capacity, driver_id, school_id } = input;
 
 		if (!bus_number || typeof bus_number !== 'string' || !bus_number.trim()) {
 			throw {
@@ -51,13 +53,26 @@ export class BusService {
 			}
 		}
 
+		if (school_id != null) {
+			const school = await School.findByPk(Number(school_id));
+			if (!school) {
+				throw {
+					status: 400,
+					code: 'SCHOOL_NOT_FOUND',
+					message: 'School not found.',
+				};
+			}
+		}
+
 		const driverId =
 			driver_id != null && String(driver_id).trim() !== '' ? Number(driver_id) : null;
+		const schoolId = school_id != null ? Number(school_id) : null;
 
 		const bus = await Bus.create({
 			bus_number: trimmed,
 			capacity: capacity !== undefined ? Number(capacity) : 50,
 			driver_id: driverId,
+			school_id: schoolId,
 		});
 
 		return bus.toJSON();
@@ -68,12 +83,18 @@ export class BusService {
 	 */
 	static async getAllBuses() {
 		const buses = await Bus.findAll({
-			attributes: ['id', 'bus_number', 'capacity', 'driver_id'],
+			attributes: ['id', 'bus_number', 'capacity', 'driver_id', 'school_id'],
 			include: [
 				{
 					model: User,
 					as: 'driver',
 					attributes: ['id', 'name', 'email'],
+					required: false,
+				},
+				{
+					model: School,
+					as: 'school',
+					attributes: ['id', 'name'],
 					required: false,
 				},
 				{
@@ -94,12 +115,18 @@ export class BusService {
 	 */
 	static async getBusById(id: number) {
 		const bus = await Bus.findByPk(id, {
-			attributes: ['id', 'bus_number', 'capacity', 'driver_id'],
+			attributes: ['id', 'bus_number', 'capacity', 'driver_id', 'school_id'],
 			include: [
 				{
 					model: User,
 					as: 'driver',
 					attributes: ['id', 'name', 'email'],
+					required: false,
+				},
+				{
+					model: School,
+					as: 'school',
+					attributes: ['id', 'name', 'address', 'latitude', 'longitude'],
 					required: false,
 				},
 				{
@@ -193,6 +220,22 @@ export class BusService {
 					};
 				}
 				(bus as any).driver_id = driver.id;
+			}
+		}
+
+		if (input.school_id !== undefined) {
+			if (input.school_id === null) {
+				(bus as any).school_id = null;
+			} else {
+				const school = await School.findByPk(Number(input.school_id));
+				if (!school) {
+					throw {
+						status: 400,
+						code: 'SCHOOL_NOT_FOUND',
+						message: 'School not found.',
+					};
+				}
+				(bus as any).school_id = school.id;
 			}
 		}
 

@@ -47,6 +47,7 @@ import {
   RefreshCw,
   Loader2,
 } from 'lucide-react';
+import { GoogleMapLocationPicker } from '@/components/google-map-location-picker';
 
 const emptyForm: CreateStudentInput = {
   full_name: '',
@@ -362,6 +363,26 @@ export function StudentView() {
                   placeholder="Optional"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Home location on map</Label>
+              <GoogleMapLocationPicker
+                value={
+                  form.home_latitude != null && form.home_longitude != null
+                    ? {
+                        lat: form.home_latitude,
+                        lng: form.home_longitude,
+                      }
+                    : null
+                }
+                onChange={(coords) =>
+                  setForm((f) => ({
+                    ...f,
+                    home_latitude: coords?.lat ?? null,
+                    home_longitude: coords?.lng ?? null,
+                  }))
+                }
+              />
             </div>
             <DialogFooter>
               <Button

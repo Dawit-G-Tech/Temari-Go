@@ -182,15 +182,6 @@ export const AttendanceView = ({
     setAccessToken(token);
   }, [user]);
 
-  // Set default date range to today
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    if (!startDate && !endDate) {
-      setStartDate(today);
-      setEndDate(today);
-    }
-  }, []);
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">

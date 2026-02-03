@@ -21,6 +21,7 @@ import notificationRoutes from './routes/notification.routes';
 import rfidCardRoutes from './routes/rfidCard.routes';
 import routeRoutes from './routes/route.routes';
 import routeAssignmentRoutes from './routes/routeAssignment.routes';
+import schoolRoutes from './routes/school.routes';
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid-cards', rfidCardRoutes);
 app.use('/api/routes', routeRoutes);
 app.use('/api/route-assignments', routeAssignmentRoutes);
+app.use('/api/schools', schoolRoutes);
 
 app.use(errorMiddleware);
 

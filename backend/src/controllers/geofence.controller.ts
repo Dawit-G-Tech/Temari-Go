@@ -8,7 +8,7 @@ import { GeofenceService, GeofenceFilters } from '../services/geofence.service';
  */
 export const createGeofence = async (req: Request, res: Response) => {
 	try {
-		const { name, type, latitude, longitude, radius_meters, student_id, bus_id } = req.body;
+		const { name, type, latitude, longitude, radius_meters, student_id, bus_id, school_id } = req.body;
 
 		// Validate required fields
 		if (!name) {
@@ -43,6 +43,7 @@ export const createGeofence = async (req: Request, res: Response) => {
 			radius_meters: radius_meters !== undefined ? Number(radius_meters) : undefined,
 			student_id: student_id !== undefined ? Number(student_id) : undefined,
 			bus_id: bus_id !== undefined ? Number(bus_id) : undefined,
+			school_id: school_id !== undefined ? Number(school_id) : undefined,
 		});
 
 		return res.status(201).json({
@@ -78,7 +79,7 @@ export const createGeofence = async (req: Request, res: Response) => {
  */
 export const getAllGeofences = async (req: Request, res: Response) => {
 	try {
-		const { type, bus_id, student_id, vehicle_id } = req.query;
+		const { type, bus_id, student_id, school_id, vehicle_id } = req.query;
 
 		// If vehicle_id is provided, use microcontroller endpoint
 		if (vehicle_id) {
@@ -102,6 +103,10 @@ export const getAllGeofences = async (req: Request, res: Response) => {
 
 		if (student_id !== undefined) {
 			filters.student_id = Number(student_id);
+		}
+
+		if (school_id !== undefined) {
+			filters.school_id = Number(school_id);
 		}
 
 		const geofences = await GeofenceService.getAllGeofences(filters);
@@ -170,7 +175,7 @@ export const getGeofenceById = async (req: Request, res: Response) => {
 export const updateGeofence = async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const { name, type, latitude, longitude, radius_meters, student_id, bus_id } = req.body;
+		const { name, type, latitude, longitude, radius_meters, student_id, bus_id, school_id } = req.body;
 
 		const updateData: any = {};
 
@@ -181,6 +186,7 @@ export const updateGeofence = async (req: Request, res: Response) => {
 		if (radius_meters !== undefined) updateData.radius_meters = Number(radius_meters);
 		if (student_id !== undefined) updateData.student_id = student_id === null ? null : Number(student_id);
 		if (bus_id !== undefined) updateData.bus_id = bus_id === null ? null : Number(bus_id);
+		if (school_id !== undefined) updateData.school_id = school_id === null ? null : Number(school_id);
 
 		const geofence = await GeofenceService.updateGeofence(Number(id), updateData);
 

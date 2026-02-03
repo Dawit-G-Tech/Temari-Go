@@ -55,7 +55,7 @@ export class AuthService {
 		
 		// Check if user is a social auth user (has provider and default password or no password)
 		if (user.provider && (!user.password || user.password === 'social-auth-no-password')) {
-			throw { status: 401, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google or GitHub to sign in.' };
+			throw { status: 401, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google to sign in.' };
 		}
 		
 		// Check if user has a password set
@@ -107,7 +107,7 @@ export class AuthService {
 
 		// Check if user is a social auth user
 		if (user.provider && (!user.password || user.password === 'social-auth-no-password')) {
-			throw { status: 400, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google or GitHub to sign in.' };
+			throw { status: 400, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google to sign in.' };
 		}
 
 		// Generate password reset token
@@ -141,7 +141,7 @@ export class AuthService {
 
 			// Check if user is a social auth user
 			if (user.provider && user.password === 'social-auth-no-password') {
-				throw { status: 400, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google or GitHub to sign in.' };
+				throw { status: 400, code: 'SOCIAL_AUTH_USER', message: 'This account was created with social authentication. Please use Google to sign in.' };
 			}
 
 			// Hash the new password

@@ -18,11 +18,6 @@ export default async function AttendancePage({
   const startDate = params.startDate as string | undefined;
   const endDate = params.endDate as string | undefined;
 
-  // Set default date to today if not provided
-  const today = new Date().toISOString().split('T')[0];
-  const finalStartDate = startDate || today;
-  const finalEndDate = endDate || today;
-
   // Fetch initial data on the server
   // This will work if cookies are available, otherwise will return empty arrays
   const [initialStudents, initialBuses, initialAttendance] = await Promise.all([
@@ -32,8 +27,8 @@ export default async function AttendancePage({
       studentId,
       busId,
       type,
-      startDate: finalStartDate,
-      endDate: finalEndDate,
+      startDate,
+      endDate,
       limit: 100,
     }).catch(() => ({ total: 0, attendances: [] })) as Promise<{
       total: number;
@@ -50,8 +45,8 @@ export default async function AttendancePage({
         studentId,
         busId,
         type,
-        startDate: finalStartDate,
-        endDate: finalEndDate,
+        startDate,
+        endDate,
       }}
     />
   );

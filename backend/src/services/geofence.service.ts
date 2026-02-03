@@ -1,5 +1,5 @@
 import { db } from '../../models';
-const { Geofence, Student, Bus, Route, RouteAssignment } = db;
+const { Geofence, Student, Bus, Route, RouteAssignment, School } = db;
 import { Op } from 'sequelize';
 import { validateCoordinates } from '../utils/google-maps';
 
@@ -11,6 +11,8 @@ export interface CreateGeofenceInput {
 	radius_meters?: number;
 	student_id?: number;
 	bus_id?: number;
+	/** For type 'school': link to school (one geofence per school). If set, bus_id can be null. */
+	school_id?: number;
 }
 
 export interface UpdateGeofenceInput {
@@ -21,12 +23,14 @@ export interface UpdateGeofenceInput {
 	radius_meters?: number;
 	student_id?: number;
 	bus_id?: number;
+	school_id?: number;
 }
 
 export interface GeofenceFilters {
 	type?: 'school' | 'home';
 	bus_id?: number;
 	student_id?: number;
+	school_id?: number;
 }
 
 export class GeofenceService {
@@ -93,6 +97,18 @@ export class GeofenceService {
 			}
 		}
 
+		// Validate school_id if provided (for type 'school')
+		if (input.school_id !== undefined && input.school_id !== null) {
+			const school = await School.findByPk(input.school_id);
+			if (!school) {
+				throw {
+					status: 404,
+					code: 'SCHOOL_NOT_FOUND',
+					message: 'School not found.',
+				};
+			}
+		}
+
 		// Validate coordinates using Google Maps API
 		const validation = await validateCoordinates(input.latitude, input.longitude);
 		if (!validation.valid) {
@@ -112,19 +128,15 @@ export class GeofenceService {
 			radius_meters: input.radius_meters || 50,
 			student_id: input.student_id || null,
 			bus_id: input.bus_id || null,
+			school_id: input.school_id || null,
 		});
 
 		// Reload with associations
 		return await Geofence.findByPk(geofence.id, {
 			include: [
-				{
-					model: Student,
-					attributes: ['id', 'full_name'],
-				},
-				{
-					model: Bus,
-					attributes: ['id', 'bus_number'],
-				},
+				{ model: Student, attributes: ['id', 'full_name'], required: false },
+				{ model: Bus, attributes: ['id', 'bus_number'], required: false },
+				{ model: School, attributes: ['id', 'name'], required: false },
 			],
 		});
 	}
@@ -147,6 +159,10 @@ export class GeofenceService {
 			where.student_id = filters.student_id;
 		}
 
+		if (filters?.school_id !== undefined) {
+			where.school_id = filters.school_id;
+		}
+
 		return await Geofence.findAll({
 			where,
 			include: [
@@ -158,6 +174,11 @@ export class GeofenceService {
 				{
 					model: Bus,
 					attributes: ['id', 'bus_number'],
+					required: false,
+				},
+				{
+					model: School,
+					attributes: ['id', 'name'],
 					required: false,
 				},
 			],
@@ -273,6 +294,18 @@ export class GeofenceService {
 			}
 		}
 
+		// Validate school_id if provided
+		if (input.school_id !== undefined && input.school_id !== null) {
+			const school = await School.findByPk(input.school_id);
+			if (!school) {
+				throw {
+					status: 404,
+					code: 'SCHOOL_NOT_FOUND',
+					message: 'School not found.',
+				};
+			}
+		}
+
 		// Validate coordinates using Google Maps API if coordinates are being updated
 		if (input.latitude !== undefined || input.longitude !== undefined) {
 			const validation = await validateCoordinates(latitude, longitude);
@@ -294,6 +327,7 @@ export class GeofenceService {
 			radius_meters: input.radius_meters !== undefined ? input.radius_meters : geofence.radius_meters,
 			student_id: input.student_id !== undefined ? input.student_id : geofence.student_id,
 			bus_id: input.bus_id !== undefined ? input.bus_id : geofence.bus_id,
+			school_id: input.school_id !== undefined ? input.school_id : geofence.school_id,
 		});
 
 		// Reload with associations
@@ -306,6 +340,10 @@ export class GeofenceService {
 				{
 					model: Bus,
 					attributes: ['id', 'bus_number'],
+				},
+				{
+					model: School,
+					attributes: ['id', 'name'],
 				},
 			],
 		});
@@ -374,13 +412,12 @@ export class GeofenceService {
 		// Remove duplicates
 		const uniqueStudentIds = [...new Set(studentIds)];
 
-		// 4. Get school geofence for this bus
-		const schoolGeofence = await Geofence.findOne({
-			where: {
-				type: 'school',
-				bus_id: bus.id,
-			},
-		});
+		// 4. Get school geofence only by bus's school (no legacy bus_id lookup)
+		const schoolGeofence = (bus as any).school_id
+			? await Geofence.findOne({
+					where: { type: 'school', school_id: (bus as any).school_id },
+			  })
+			: null;
 
 		// 5. Get all home geofences for students on this bus's routes
 		const homeGeofences = uniqueStudentIds.length > 0

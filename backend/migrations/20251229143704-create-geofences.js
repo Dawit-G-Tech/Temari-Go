@@ -45,6 +45,15 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
+      school_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'schools',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
+      },
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,

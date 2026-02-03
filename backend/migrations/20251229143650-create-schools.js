@@ -3,40 +3,28 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('buses', {
+    await queryInterface.createTable('schools', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      bus_number: {
-        type: Sequelize.STRING(20),
+      name: {
+        type: Sequelize.STRING(100),
         allowNull: false,
-        unique: true,
       },
-      driver_id: {
-        type: Sequelize.INTEGER,
+      address: {
+        type: Sequelize.TEXT,
         allowNull: true,
-        references: {
-          model: 'Users',
-          key: 'id',
-        },
-        onDelete: 'SET NULL',
       },
-      school_id: {
-        type: Sequelize.INTEGER,
+      latitude: {
+        type: Sequelize.DECIMAL(10, 8),
         allowNull: true,
-        references: {
-          model: 'schools',
-          key: 'id',
-        },
-        onDelete: 'SET NULL',
       },
-      capacity: {
-        type: Sequelize.INTEGER,
+      longitude: {
+        type: Sequelize.DECIMAL(11, 8),
         allowNull: true,
-        defaultValue: 50,
       },
       created_at: {
         allowNull: false,
@@ -52,6 +40,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('buses');
-  }
+    await queryInterface.dropTable('schools');
+  },
 };

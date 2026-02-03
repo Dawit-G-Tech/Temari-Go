@@ -16,6 +16,7 @@ import { Payment } from './payment.model';
 import { Notification } from './notification.model';
 import { Route } from './route.model';
 import { RouteAssignment } from './routeAssignment.model';
+import { School } from './school.model';
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env as 'development' | 'production'];
@@ -39,6 +40,7 @@ export const sequelize = new Sequelize(dbConfig.url, {
     Notification,
     Route,
     RouteAssignment,
+    School,
   ],
   logging: false,
 });
@@ -61,4 +63,5 @@ export const db = {
   Notification,
   Route,
   RouteAssignment,
+  School,
 };

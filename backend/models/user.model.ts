@@ -44,9 +44,6 @@ export class User extends Model {
   googleId?: string;
 
   @Column({ type: DataType.STRING, allowNull: true })
-  githubId?: string;
-
-  @Column({ type: DataType.STRING, allowNull: true })
   avatar?: string;
 
   @Column({ type: DataType.STRING, allowNull: true })
