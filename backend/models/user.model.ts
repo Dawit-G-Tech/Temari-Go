@@ -17,7 +17,7 @@ import { DriverRating } from './driverRating.model';
 import { Payment } from './payment.model';
 import { Notification } from './notification.model';
 
-@Table({ tableName: 'Users' })
+@Table({ tableName: 'Users', underscored: true })
 export class User extends Model {
   @Column({ type: DataType.STRING, allowNull: false })
   name!: string;
@@ -41,7 +41,7 @@ export class User extends Model {
   fcm_token?: string;
 
   @Column({ type: DataType.STRING, allowNull: true })
-  googleId?: string;
+  google_id?: string;
 
   @Column({ type: DataType.STRING, allowNull: true })
   avatar?: string;
@@ -54,7 +54,7 @@ export class User extends Model {
 
   @ForeignKey(() => Role)
   @Column({ type: DataType.INTEGER, allowNull: true })
-  roleId?: number;
+  role_id?: number;
 
   @BelongsTo(() => Role)
   role?: Role;

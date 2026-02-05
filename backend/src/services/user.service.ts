@@ -52,7 +52,7 @@ export class UserService {
 		}
 
 		const users = await User.findAll({
-			where: { roleId: driverRole.id },
+			where: { role_id: driverRole.id },
 			attributes: ['id', 'name', 'email'],
 		});
 

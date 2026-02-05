@@ -8,7 +8,7 @@ import {
 } from 'sequelize-typescript';
 import { Bus } from './bus.model';
 
-@Table({ tableName: 'locations' })
+@Table({ tableName: 'locations', underscored: true })
 export class Location extends Model {
   @ForeignKey(() => Bus)
   @Column({ type: DataType.INTEGER, allowNull: false })

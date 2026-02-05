@@ -33,13 +33,13 @@ export class AuthService {
 		const password = await hashPassword(input.password);
 		// default role: user
 		const role = await Role.findOne({ where: { name: 'user' } });
-		const user = await User.create({ name: input.name, email: input.email, password, roleId: role?.id });
+		const user = await User.create({ name: input.name, email: input.email, password, role_id: role?.id });
 		
 		// Generate tokens for the new user
 		const roleName = role?.name || 'user';
 		const { token: accessToken, expiresIn: accessTokenExpiresIn } = signAccessToken({ id: String(user.id), email: user.email, role: roleName });
 		const { token: refreshToken, expiresIn: refreshTokenExpiresIn } = signRefreshToken({ id: String(user.id), email: user.email, role: roleName });
-		await RefreshToken.create({ token: refreshToken, expiryDate: parseRefreshExpiryToDate(), userId: user.id as number });
+		await RefreshToken.create({ token: refreshToken, expiry_date: parseRefreshExpiryToDate(), user_id: user.id as number });
 		
 		return {
 			user: { id: String(user.id), name: user.name, email: user.email, role: roleName },
@@ -70,7 +70,7 @@ export class AuthService {
 		const roleName = user.role?.name || 'user';
 		const { token: accessToken, expiresIn: accessTokenExpiresIn } = signAccessToken({ id: String(user.id), email: user.email, role: roleName });
 		const { token: refreshToken, expiresIn: refreshTokenExpiresIn } = signRefreshToken({ id: String(user.id), email: user.email, role: roleName });
-		await RefreshToken.create({ token: refreshToken, expiryDate: parseRefreshExpiryToDate(), userId: user.id as number });
+		await RefreshToken.create({ token: refreshToken, expiry_date: parseRefreshExpiryToDate(), user_id: user.id as number });
 		return {
 			user: { id: String(user.id), name: user.name, email: user.email, role: roleName },
 			tokens: { accessToken, accessTokenExpiresIn, refreshToken, refreshTokenExpiresIn },
@@ -85,7 +85,7 @@ export class AuthService {
 		if (!existing) {
 			throw { status: 401, code: 'INVALID_TOKEN', message: 'Invalid token.' };
 		}
-		if (existing.expiryDate && existing.expiryDate.getTime() < Date.now()) {
+		if (existing.expiry_date && existing.expiry_date.getTime() < Date.now()) {
 			throw { status: 401, code: 'TOKEN_EXPIRED', message: 'Token has expired.' };
 		}
 		// issue new access token
@@ -151,7 +151,7 @@ export class AuthService {
 			await user.update({ password: hashedPassword });
 
 			// Invalidate all refresh tokens for security
-			await RefreshToken.destroy({ where: { userId: user.id } });
+			await RefreshToken.destroy({ where: { user_id: user.id } });
 
 			return { success: true, message: 'Password has been reset successfully.' };
 		} catch (error: any) {

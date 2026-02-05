@@ -310,7 +310,7 @@ export class NotificationService {
 			}
 
 			const parents = await User.findAll({
-				where: { roleId: parentRole.id },
+				where: { role_id: parentRole.id },
 				attributes: ['id'],
 			});
 

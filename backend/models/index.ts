@@ -43,6 +43,10 @@ export const sequelize = new Sequelize(dbConfig.url, {
     School,
   ],
   logging: false,
+  define: {
+    underscored: true,
+    timestamps: true,
+  },
 });
 
 export const db = {

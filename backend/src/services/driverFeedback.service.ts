@@ -51,7 +51,7 @@ export class DriverFeedbackService {
 		const driver = await User.findOne({
 			where: {
 				id: input.driver_id,
-				roleId: driverRole.id,
+				role_id: driverRole.id,
 			},
 		});
 
@@ -76,7 +76,7 @@ export class DriverFeedbackService {
 		const parent = await User.findOne({
 			where: {
 				id: input.parent_id,
-				roleId: parentRole.id,
+				role_id: parentRole.id,
 			},
 		});
 

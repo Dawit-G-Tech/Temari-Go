@@ -16,7 +16,7 @@ passport.use(new GoogleStrategy({
     console.log('Google OAuth Strategy - Profile:', profile);
     console.log('Google OAuth Strategy - Access Token:', accessToken);
     // Check if user already exists with this Google ID
-    let user = await User.findOne({ where: { googleId: profile.id } });
+    let user = await User.findOne({ where: { google_id: profile.id } });
     
     if (user) {
       return done(null, user);
@@ -27,7 +27,7 @@ passport.use(new GoogleStrategy({
     
     if (user) {
       // Link Google account to existing user
-      user.googleId = profile.id;
+      (user as any).google_id = profile.id;
       user.avatar = profile.photos?.[0]?.value;
       user.provider = 'google';
       await user.save();
@@ -40,10 +40,10 @@ passport.use(new GoogleStrategy({
       name: profile.displayName,
       email: profile.emails?.[0]?.value,
       password: 'social-auth-no-password', // Default password for social auth users
-      googleId: profile.id,
+      google_id: profile.id,
       avatar: profile.photos?.[0]?.value,
       provider: 'google',
-      roleId: role?.id
+      role_id: role?.id
     });
     
     return done(null, newUser);

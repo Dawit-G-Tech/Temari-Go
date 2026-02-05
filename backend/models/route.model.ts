@@ -10,7 +10,7 @@ import {
 import { Bus } from './bus.model';
 import { RouteAssignment } from './routeAssignment.model';
 
-@Table({ tableName: 'routes' })
+@Table({ tableName: 'routes', underscored: true })
 export class Route extends Model {
   @ForeignKey(() => Bus)
   @Column({ type: DataType.INTEGER, allowNull: false })

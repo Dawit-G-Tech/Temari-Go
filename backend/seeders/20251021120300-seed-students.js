@@ -21,9 +21,9 @@ module.exports = {
             name: 'Jane Smith',
             email: 'jane@example.com',
             password: null,
-            roleId: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+            role_id: null,
+          created_at: new Date(),
+          updated_at: new Date(),
           },
         ],
         {}

@@ -13,11 +13,11 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      expiryDate: {
+      expiry_date: {
         type: Sequelize.DATE,
         allowNull: false,
       },
-      userId: {
+      user_id: {
         type: Sequelize.INTEGER,
         references: {
           model: 'Users',
@@ -25,12 +25,12 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),

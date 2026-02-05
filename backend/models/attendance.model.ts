@@ -11,7 +11,7 @@ import { Bus } from './bus.model';
 import { RFIDCard } from './rfidCard.model';
 import { Geofence } from './geofence.model';
 
-@Table({ tableName: 'attendance' })
+@Table({ tableName: 'attendance', underscored: true })
 export class Attendance extends Model {
   @ForeignKey(() => Student)
   @Column({ type: DataType.INTEGER, allowNull: false })

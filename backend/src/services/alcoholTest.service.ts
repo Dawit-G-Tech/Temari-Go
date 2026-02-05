@@ -173,7 +173,7 @@ export class AlcoholTestService {
 
 			const admins = await User.findAll({
 				where: {
-					roleId: adminRole.id,
+					role_id: adminRole.id,
 				},
 			});
 

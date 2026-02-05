@@ -11,7 +11,7 @@ module.exports = {
       name: 'idx_locations_bus_timestamp',
     });
 
-    await queryInterface.addIndex('Users', ['roleId'], {
+    await queryInterface.addIndex('Users', ['role_id'], {
       name: 'idx_users_role',
     });
 

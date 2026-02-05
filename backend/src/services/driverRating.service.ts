@@ -483,7 +483,7 @@ export class DriverRatingService {
 
 		const drivers = await User.findAll({
 			where: {
-				roleId: driverRole.id,
+				role_id: driverRole.id,
 			},
 		});
 

@@ -2,9 +2,9 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // by adding a roleId foreign key column on Users.
+    // by adding a role_id foreign key column on Users.
     // Make it nullable and use SET NULL on delete to be safe with seeding/order.
-    await queryInterface.addColumn('Users', 'roleId', {
+    await queryInterface.addColumn('Users', 'role_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -17,6 +17,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.removeColumn('Users', 'roleId');
+    await queryInterface.removeColumn('Users', 'role_id');
   },
 };

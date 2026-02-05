@@ -1,6 +1,6 @@
 import { Table, Column, Model, DataType } from 'sequelize-typescript';
 
-@Table({ tableName: 'schools' })
+@Table({ tableName: 'schools', underscored: true })
 export class School extends Model {
   @Column({ type: DataType.STRING(100), allowNull: false })
   name!: string;

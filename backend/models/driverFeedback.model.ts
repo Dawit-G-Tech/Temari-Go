@@ -8,7 +8,7 @@ import {
 } from 'sequelize-typescript';
 import { User } from './user.model';
 
-@Table({ tableName: 'driver_feedback' })
+@Table({ tableName: 'driver_feedback', underscored: true })
 export class DriverFeedback extends Model {
   @ForeignKey(() => User)
   @Column({ type: DataType.INTEGER, allowNull: false })

@@ -208,7 +208,7 @@ export class LocationService {
 
 			const admins = await User.findAll({
 				where: {
-					roleId: adminRole.id,
+					role_id: adminRole.id,
 				},
 			});
 
@@ -278,7 +278,7 @@ export class LocationService {
 			const admins = adminRole
 				? await User.findAll({
 						where: {
-							roleId: adminRole.id,
+							role_id: adminRole.id,
 						},
 					})
 				: [];
