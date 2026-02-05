@@ -41,6 +41,27 @@ export class UserService {
 		await user.update({ fcm_token: fcmToken });
 		return { success: true, message: 'FCM token updated successfully' };
 	}
+
+	/**
+	 * List all users with the "driver" role (id, name, email only).
+	 */
+	static async listDrivers() {
+		const driverRole = await Role.findOne({ where: { name: 'driver' } });
+		if (!driverRole) {
+			return [];
+		}
+
+		const users = await User.findAll({
+			where: { roleId: driverRole.id },
+			attributes: ['id', 'name', 'email'],
+		});
+
+		return users.map((u: any) => ({
+			id: u.id,
+			name: u.name,
+			email: u.email,
+		}));
+	}
 }
 
 

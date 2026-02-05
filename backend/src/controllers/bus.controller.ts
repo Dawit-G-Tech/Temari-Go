@@ -48,11 +48,37 @@ export const createBus = async (req: Request, res: Response) => {
  */
 export const getAllBuses = async (req: Request, res: Response) => {
 	try {
-		const buses = await BusService.getAllBuses();
+		const { search, status, schoolId, page, pageSize } = req.query;
+
+		const result = await BusService.getAllBuses({
+			search: typeof search === 'string' ? search : undefined,
+			status:
+				status === 'assigned' || status === 'unassigned'
+					? status
+					: undefined,
+			schoolId:
+				typeof schoolId === 'string' && schoolId.trim() !== ''
+					? Number(schoolId)
+					: undefined,
+			page:
+				typeof page === 'string' && page.trim() !== ''
+					? Number(page)
+					: undefined,
+			pageSize:
+				typeof pageSize === 'string' && pageSize.trim() !== ''
+					? Number(pageSize)
+					: undefined,
+		});
 
 		return res.status(200).json({
 			success: true,
-			data: buses,
+			data: result.items,
+			meta: {
+				total: result.total,
+				page: result.page,
+				pageSize: result.pageSize,
+				totalPages: result.totalPages,
+			},
 		});
 	} catch (error: any) {
 		console.error('Get buses error:', error);

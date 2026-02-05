@@ -75,14 +75,40 @@ export async function getServerStudents() {
   }
 }
 
+import type { Bus } from './bus-api';
+
 /**
  * Get all buses (server-side)
+ *
+ * This is intentionally more forgiving than `serverFetch`:
+ * - If there is no access token, it just returns an empty array instead of throwing.
+ * - If the request fails or returns 401, it also returns an empty array.
+ * The client-side BusView will then load data using the browser auth token.
  */
-export async function getServerBuses() {
+export async function getServerBuses(): Promise<Bus[]> {
   try {
-    return await serverFetch('/api/buses', {
+    const accessToken = await getServerAccessToken();
+    if (!accessToken) {
+      return [];
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/buses`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
       cache: 'no-store',
+      credentials: 'include',
     });
+
+    if (!response.ok) {
+      // Silently fall back to client-side fetching
+      return [];
+    }
+
+    const result = await response.json();
+    return result.data ?? result;
   } catch (error) {
     console.error('Failed to fetch buses on server:', error);
     return [];

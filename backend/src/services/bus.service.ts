@@ -1,4 +1,5 @@
 import { db } from '../../models';
+import { Op } from 'sequelize';
 const { Bus, User, Route, Role, School } = db;
 import { LocationService } from './location.service';
 import { AttendanceService } from './attendance.service';
@@ -15,6 +16,14 @@ export interface UpdateBusInput {
 	capacity?: number;
 	driver_id?: number | null;
 	school_id?: number | null;
+}
+
+export interface ListBusOptions {
+	search?: string;
+	status?: 'assigned' | 'unassigned';
+	schoolId?: number;
+	page?: number;
+	pageSize?: number;
 }
 
 export class BusService {
@@ -79,10 +88,43 @@ export class BusService {
 	}
 
 	/**
-	 * List all buses with driver info and routes
+	 * List buses with driver info and routes.
+	 * Supports optional search, filtering, and pagination.
 	 */
-	static async getAllBuses() {
-		const buses = await Bus.findAll({
+	static async getAllBuses(options: ListBusOptions = {}) {
+		const {
+			search,
+			status,
+			schoolId,
+			page = 1,
+			pageSize = 20,
+		} = options;
+
+		const where: any = {};
+
+		if (search && search.trim()) {
+			const term = `%${search.trim()}%`;
+			where.bus_number = { [Op.iLike]: term };
+		}
+
+		if (schoolId) {
+			where.school_id = Number(schoolId);
+		}
+
+		if (status === 'assigned') {
+			where.driver_id = { [Op.ne]: null };
+		} else if (status === 'unassigned') {
+			where.driver_id = null;
+		}
+
+		const limit = Math.max(1, Math.min(pageSize, 100));
+		const offset = Math.max(0, (Math.max(page, 1) - 1) * limit);
+
+		const { rows, count } = await Bus.findAndCountAll({
+			where,
+			limit,
+			offset,
+			distinct: true,
 			attributes: ['id', 'bus_number', 'capacity', 'driver_id', 'school_id'],
 			include: [
 				{
@@ -107,7 +149,17 @@ export class BusService {
 			order: [['bus_number', 'ASC']],
 		});
 
-		return buses.map((b) => b.toJSON());
+		const items = rows.map((b) => b.toJSON());
+		const total = count;
+		const totalPages = Math.max(1, Math.ceil(total / limit));
+
+		return {
+			items,
+			total,
+			page: Math.max(page, 1),
+			pageSize: limit,
+			totalPages,
+		};
 	}
 
 	/**
