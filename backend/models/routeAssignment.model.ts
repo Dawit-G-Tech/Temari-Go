@@ -9,7 +9,7 @@ import {
 import { Route } from './route.model';
 import { Student } from './student.model';
 
-@Table({ tableName: 'route_assignments', underscored: true })
+@Table({ tableName: 'route_assignments', underscored: true, timestamps: false })
 export class RouteAssignment extends Model {
   @ForeignKey(() => Route)
   @Column({ type: DataType.INTEGER, allowNull: false })
