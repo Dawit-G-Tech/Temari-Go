@@ -39,6 +39,7 @@ import {
   MoreVertical,
   User,
   LogOut,
+  SettingsIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -218,9 +219,9 @@ export const DashboardSidebar = () => {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/billing" className="flex items-center gap-2">
-                <CreditCard className="size-4" />
-                Billing
+              <Link href="/setting" className="flex items-center gap-2">
+                <SettingsIcon className="size-4" />
+                Setting
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

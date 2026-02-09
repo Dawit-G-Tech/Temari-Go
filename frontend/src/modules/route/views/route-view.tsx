@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
+import { useAuth } from '@/hooks/use-auth';
 import { busAPI, type Bus } from '@/lib/bus-api';
 import { studentAPI, type Student } from '@/lib/student-api';
 import {
@@ -29,6 +31,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,7 +57,32 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Bus as BusIcon,
+  Info,
   Loader2,
   Map,
   Pencil,
@@ -59,6 +93,9 @@ import {
   Users,
   Wand2,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const emptyRouteForm: CreateRouteInput = {
   bus_id: 0,
@@ -70,6 +107,9 @@ const emptyRouteForm: CreateRouteInput = {
 export function RouteView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const [routes, setRoutes] = useState<Route[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
@@ -78,14 +118,15 @@ export function RouteView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [busFilter, setBusFilter] = useState<number | undefined>(() => {
+  const [busFilter, setBusFilter] = useState<string>(() => {
     const busId = searchParams?.get('busId');
-    return busId ? Number(busId) : undefined;
+    return busId ?? '';
   });
 
   const [routeDialogOpen, setRouteDialogOpen] = useState(false);
   const [editingRouteId, setEditingRouteId] = useState<number | null>(null);
   const [routeForm, setRouteForm] = useState<CreateRouteInput>(emptyRouteForm);
+  const [routeFormError, setRouteFormError] = useState<string | null>(null);
   const [routeSubmitLoading, setRouteSubmitLoading] = useState(false);
 
   const [deleteRouteId, setDeleteRouteId] = useState<number | null>(null);
@@ -119,37 +160,43 @@ export function RouteView() {
     null,
   );
 
-  const accessToken = authClient.getAccessToken() ?? undefined;
+  const token = accessToken ?? undefined;
+  const busFilterId = busFilter ? Number(busFilter) : undefined;
+
+  useEffect(() => {
+    setAccessToken(authClient.getAccessToken());
+  }, [user]);
 
   const loadOptions = useCallback(async () => {
     try {
-      const token = accessToken;
       const [busResult, studentResult] = await Promise.all([
         busAPI.getAll(token, { page: 1, pageSize: 100 }),
         studentAPI.getAll(token),
       ]);
-      setBuses(busResult.items);
-      setStudents(studentResult);
+      setBuses(Array.isArray(busResult?.items) ? busResult.items : []);
+      setStudents(Array.isArray(studentResult) ? studentResult : []);
     } catch (err) {
       console.error('Failed to load buses/students', err);
     }
-  }, [accessToken]);
+  }, [token]);
 
   const loadRoutes = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await routeAPI.getAll(accessToken, {
-        bus_id: busFilter,
+      const data = await routeAPI.getAll(token, {
+        bus_id: busFilterId,
       });
       setRoutes(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load routes');
+      const msg = err instanceof Error ? err.message : 'Failed to load routes';
+      setError(msg);
       setRoutes([]);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [accessToken, busFilter]);
+  }, [token, busFilterId]);
 
   useEffect(() => {
     void loadOptions();
@@ -160,22 +207,16 @@ export function RouteView() {
   }, [loadRoutes]);
 
   useEffect(() => {
-    const current = searchParams?.toString() ?? '';
-    const params = new URLSearchParams(current);
-
-    if (busFilter) params.set('busId', String(busFilter));
-    else params.delete('busId');
-
+    const params = new URLSearchParams();
+    if (busFilter) params.set('busId', busFilter);
     const query = params.toString();
-    if (query === current) return;
-    const newUrl = query
-      ? `${window.location.pathname}?${query}`
-      : window.location.pathname;
-    router.push(newUrl, { scroll: false });
-  }, [busFilter, router, searchParams]);
+    const desired = query ? `/routes?${query}` : '/routes';
+    router.replace(desired, { scroll: false });
+  }, [busFilter, router]);
 
   const openCreateRoute = () => {
     setEditingRouteId(null);
+    setRouteFormError(null);
     setRouteForm({
       ...emptyRouteForm,
       bus_id: buses[0]?.id ?? 0,
@@ -185,6 +226,7 @@ export function RouteView() {
 
   const openEditRoute = (route: Route) => {
     setEditingRouteId(route.id);
+    setRouteFormError(null);
     setRouteForm({
       bus_id: route.bus_id,
       name: route.name,
@@ -198,20 +240,31 @@ export function RouteView() {
     setRouteDialogOpen(false);
     setEditingRouteId(null);
     setRouteForm(emptyRouteForm);
+    setRouteFormError(null);
     setRouteSubmitLoading(false);
   };
 
   const handleRouteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!routeForm.bus_id || !routeForm.name.trim()) return;
+    setRouteFormError(null);
+    const name = routeForm.name?.trim();
+    if (!name) {
+      setRouteFormError('Route name is required.');
+      return;
+    }
+    const busId = Number(routeForm.bus_id);
+    if (!busId || !buses.some((b) => b.id === busId)) {
+      setRouteFormError('Please select a valid bus.');
+      return;
+    }
 
     setRouteSubmitLoading(true);
     setError(null);
 
     try {
       const payload: CreateRouteInput | UpdateRouteInput = {
-        bus_id: Number(routeForm.bus_id),
-        name: routeForm.name.trim(),
+        bus_id: busId,
+        name,
         start_time: routeForm.start_time || null,
         end_time: routeForm.end_time || null,
       };
@@ -220,21 +273,25 @@ export function RouteView() {
         const updated = await routeAPI.update(
           editingRouteId,
           payload,
-          accessToken,
+          token,
         );
         setRoutes((prev) =>
           prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)),
         );
+        toast.success('Route updated');
       } else {
         const created = await routeAPI.create(
           payload as CreateRouteInput,
-          accessToken,
+          token,
         );
         setRoutes((prev) => [...prev, created]);
+        toast.success('Route created');
       }
       closeRouteDialog();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Route save failed');
+      const msg = err instanceof Error ? err.message : 'Route save failed';
+      setRouteFormError(msg);
+      toast.error(msg);
     } finally {
       setRouteSubmitLoading(false);
     }
@@ -251,11 +308,14 @@ export function RouteView() {
     setDeleteRouteLoading(true);
     setError(null);
     try {
-      await routeAPI.delete(deleteRouteId, accessToken);
+      await routeAPI.delete(deleteRouteId, token);
       setRoutes((prev) => prev.filter((r) => r.id !== deleteRouteId));
       cancelDeleteRoute();
+      toast.success('Route deleted');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to delete route');
+      const msg = err instanceof Error ? err.message : 'Failed to delete route';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setDeleteRouteLoading(false);
     }
@@ -268,15 +328,15 @@ export function RouteView() {
     setOptimizeMessage(null);
     setDirectionsSummary(null);
     try {
-      const data = await routeAssignmentAPI.getByRouteId(route.id, accessToken);
+      const data = await routeAssignmentAPI.getByRouteId(route.id, token);
       setAssignments(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
-      setError(
+      const msg =
         err instanceof Error
           ? err.message
-          : 'Failed to load route assignments',
-      );
+          : 'Failed to load route assignments';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setAssignmentsLoading(false);
     }
@@ -331,7 +391,7 @@ export function RouteView() {
         pickup_longitude: homeLng,
       };
 
-      const created = await routeAssignmentAPI.create(payload, accessToken);
+      const created = await routeAssignmentAPI.create(payload, token);
       setAssignments((prev) => [...prev, created]);
       setAssignmentForm((prev) => ({
         ...prev,
@@ -340,10 +400,12 @@ export function RouteView() {
         pickup_latitude: null,
         pickup_longitude: null,
       }));
+      toast.success('Student added to route');
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to assign student',
-      );
+      const msg =
+        err instanceof Error ? err.message : 'Failed to assign student';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setAssignmentSubmitLoading(false);
     }
@@ -360,15 +422,17 @@ export function RouteView() {
     setDeleteAssignmentLoading(true);
     setError(null);
     try {
-      await routeAssignmentAPI.delete(deleteAssignmentId, accessToken);
+      await routeAssignmentAPI.delete(deleteAssignmentId, token);
       setAssignments((prev) =>
         prev.filter((a) => a.id !== deleteAssignmentId),
       );
       cancelDeleteAssignment();
+      toast.success('Student removed from route');
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to remove assignment',
-      );
+      const msg =
+        err instanceof Error ? err.message : 'Failed to remove assignment';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setDeleteAssignmentLoading(false);
     }
@@ -382,23 +446,25 @@ export function RouteView() {
       const result = await routeAPI.optimize(
         route.id,
         { zone_radius_km: 0.5 },
-        accessToken,
+        token,
       );
       const updatedRoute = result.route ?? result;
       setRoutes((prev) =>
         prev.map((r) => (r.id === updatedRoute.id ? { ...r, ...updatedRoute } : r)),
       );
       if (selectedRouteForAssignments && selectedRouteForAssignments.id === route.id) {
-        // Optimizer may update pickup_order; refetch assignments for fresh ordering
         const refreshed = await routeAssignmentAPI.getByRouteId(
           route.id,
-          accessToken,
+          token,
         );
         setAssignments(Array.isArray(refreshed) ? refreshed : []);
       }
       setOptimizeMessage('Route optimized successfully. Pickup order updated.');
+      toast.success('Route optimized');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to optimize route');
+      const msg = err instanceof Error ? err.message : 'Failed to optimize route';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setOptimizeLoadingRouteId(null);
     }
@@ -409,15 +475,17 @@ export function RouteView() {
     setDirectionsSummary(null);
     setError(null);
     try {
-      const result = await routeAPI.getDirections(route.id, {}, accessToken);
+      const result = await routeAPI.getDirections(route.id, {}, token);
       const summaryText =
-        (result as any).summary ||
-        'Directions retrieved. Open the native map view in your mobile app to see the polyline.';
+        (result as { summary?: string })?.summary ||
+        'Directions retrieved. Open the map view to see the route.';
       setDirectionsSummary(summaryText);
+      toast.success('Directions loaded');
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch directions',
-      );
+      const msg =
+        err instanceof Error ? err.message : 'Failed to fetch directions';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setDirectionsLoadingRouteId(null);
     }
@@ -433,83 +501,244 @@ export function RouteView() {
 
   return (
     <div className="space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/home">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Routes</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <RouteIcon className="size-6" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <RouteIcon className="size-6 text-primary" aria-hidden />
             Routes
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Plan, optimize, and assign students to bus routes.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2">
-            <select
-              value={busFilter ?? ''}
-              onChange={(e) =>
-                setBusFilter(e.target.value ? Number(e.target.value) : undefined)
-              }
-              className="h-8 rounded-md border bg-background px-2 text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={busFilter || 'all'}
+            onValueChange={(v) => setBusFilter(v === 'all' ? '' : v)}
+          >
+            <SelectTrigger
+              id="route-bus-filter"
+              className="h-9 w-[140px]"
+              aria-label="Filter by bus"
             >
-              <option value="">All buses</option>
+              <SelectValue placeholder="All buses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All buses</SelectItem>
               {buses.map((bus) => (
-                <option key={bus.id} value={bus.id}>
+                <SelectItem key={bus.id} value={String(bus.id)}>
                   {bus.bus_number}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void loadRoutes()}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-              <span className="ml-2">Refresh</span>
-            </Button>
-            <Button size="sm" onClick={openCreateRoute}>
-              <Plus className="size-4" />
-              <span className="ml-2">New route</span>
-            </Button>
-          </div>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadRoutes()}
+            disabled={loading}
+            aria-label="Refresh routes"
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <RefreshCw className="size-4" aria-hidden />
+            )}
+            <span className="ml-2">Refresh</span>
+          </Button>
+          <Button size="sm" onClick={openCreateRoute} aria-label="Create new route">
+            <Plus className="size-4" aria-hidden />
+            <span className="ml-2">New route</span>
+          </Button>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>Routes</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            {routes.length} route{routes.length !== 1 ? 's' : ''} configured
-          </p>
+        <CardHeader className="space-y-4 pb-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <RouteIcon className="size-5" />
+              All Routes
+            </CardTitle>
+            <span className="text-sm text-muted-foreground">
+              {loading
+                ? 'Loading…'
+                : `${routes.length} route${routes.length !== 1 ? 's' : ''} configured`}
+            </span>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton
+                  key={i}
+                  className={cn('h-12 w-full', i === 0 && 'rounded-t-lg')}
+                />
+              ))}
             </div>
           ) : routes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
-              <p>No routes yet. Create a route to start assigning students.</p>
-              <Button size="sm" onClick={openCreateRoute}>
-                <Plus className="size-4" />
-                <span className="ml-2">Create your first route</span>
-              </Button>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <RouteIcon className="size-6 text-muted-foreground" />
+                </EmptyMedia>
+                <EmptyTitle>No routes yet</EmptyTitle>
+                <EmptyDescription>
+                  Create a route linked to a bus, then assign students and use
+                  optimize to order pickup stops.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button size="sm" onClick={openCreateRoute}>
+                  <Plus className="size-4" />
+                  Create your first route
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : isMobile ? (
+            <div className="space-y-3">
+              {routes.map((route) => {
+                const bus = route.bus ?? findBusById(route.bus_id);
+                const total = totalAssignmentsForRoute(route);
+                return (
+                  <Card key={route.id} className="overflow-hidden">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">{route.name}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            {bus && (
+                              <span className="flex items-center gap-1">
+                                <BusIcon className="size-3" />
+                                {bus.bus_number}
+                              </span>
+                            )}
+                            {(route.start_time || route.end_time) && (
+                              <span>
+                                {route.start_time ?? '—'} – {route.end_time ?? '—'}
+                              </span>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="mt-2 font-normal">
+                            {total} student{total !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                        <TooltipProvider>
+                          <div className="flex shrink-0 gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openAssignments(route)}
+                                  aria-label="Manage assignments"
+                                >
+                                  <Users className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Manage assignments</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOptimizeRoute(route)}
+                                  disabled={
+                                    optimizeLoadingRouteId === route.id ||
+                                    directionsLoadingRouteId === route.id
+                                  }
+                                  aria-label="Optimize route"
+                                >
+                                  {optimizeLoadingRouteId === route.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Wand2 className="size-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Optimize pickup order</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleGetDirections(route)}
+                                  disabled={
+                                    directionsLoadingRouteId === route.id ||
+                                    optimizeLoadingRouteId === route.id
+                                  }
+                                  aria-label="Get directions"
+                                >
+                                  {directionsLoadingRouteId === route.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Map className="size-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Get directions</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditRoute(route)}
+                                  aria-label="Edit route"
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit route</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => confirmDeleteRoute(route.id)}
+                                  aria-label="Delete route"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete route</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
@@ -558,86 +787,119 @@ export function RouteView() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openAssignments(route)}
-                            title="Manage assignments"
-                          >
-                            <Users className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOptimizeRoute(route)}
-                            disabled={
-                              optimizeLoadingRouteId === route.id ||
-                              directionsLoadingRouteId === route.id
-                            }
-                            title="Optimize route"
-                          >
-                            {optimizeLoadingRouteId === route.id ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Wand2 className="size-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleGetDirections(route)}
-                            disabled={
-                              directionsLoadingRouteId === route.id ||
-                              optimizeLoadingRouteId === route.id
-                            }
-                            title="Get directions summary"
-                          >
-                            {directionsLoadingRouteId === route.id ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Map className="size-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditRoute(route)}
-                            aria-label="Edit route"
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => confirmDeleteRoute(route.id)}
-                            aria-label="Delete route"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className="flex items-center justify-end gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openAssignments(route)}
+                                  aria-label="Manage assignments"
+                                >
+                                  <Users className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Manage assignments</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOptimizeRoute(route)}
+                                  disabled={
+                                    optimizeLoadingRouteId === route.id ||
+                                    directionsLoadingRouteId === route.id
+                                  }
+                                  aria-label="Optimize route"
+                                >
+                                  {optimizeLoadingRouteId === route.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Wand2 className="size-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Optimize pickup order</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleGetDirections(route)}
+                                  disabled={
+                                    directionsLoadingRouteId === route.id ||
+                                    optimizeLoadingRouteId === route.id
+                                  }
+                                  aria-label="Get directions"
+                                >
+                                  {directionsLoadingRouteId === route.id ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <Map className="size-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Get directions</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditRoute(route)}
+                                  aria-label="Edit route"
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Edit route</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => confirmDeleteRoute(route.id)}
+                                  aria-label="Delete route"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete route</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={routeDialogOpen} onOpenChange={setRouteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={routeDialogOpen} onOpenChange={(open) => !open && closeRouteDialog()}>
+        <DialogContent className="sm:max-w-md" aria-describedby="route-form-desc">
           <DialogHeader>
             <DialogTitle>
               {editingRouteId ? 'Edit route' : 'New route'}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="route-form-desc">
               Link the route to a bus and define its operating window.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRouteSubmit} className="space-y-4">
+            {routeFormError && (
+              <Alert variant="destructive">
+                <AlertDescription>{routeFormError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="route_name">Route name *</Label>
               <Input
@@ -646,30 +908,40 @@ export function RouteView() {
                 onChange={(e) =>
                   setRouteForm((f) => ({ ...f, name: e.target.value }))
                 }
-                placeholder="Morning run for BUS-001"
+                placeholder="e.g. Morning run – BUS-001"
                 required
+                autoComplete="off"
               />
             </div>
             <div className="space-y-2">
-              <Label>Bus *</Label>
-              <select
-                value={routeForm.bus_id || ''}
-                onChange={(e) =>
+              <Label htmlFor="route_bus">Bus *</Label>
+              <Select
+                value={routeForm.bus_id ? String(routeForm.bus_id) : ''}
+                onValueChange={(v) =>
                   setRouteForm((f) => ({
                     ...f,
-                    bus_id: e.target.value ? Number(e.target.value) : 0,
+                    bus_id: v ? Number(v) : 0,
                   }))
                 }
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 required
+                disabled={buses.length === 0}
               >
-                <option value="">Select bus</option>
-                {buses.map((bus) => (
-                  <option key={bus.id} value={bus.id}>
-                    {bus.bus_number}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="route_bus" aria-label="Select bus">
+                  <SelectValue placeholder="Select bus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buses.map((bus) => (
+                    <SelectItem key={bus.id} value={String(bus.id)}>
+                      {bus.bus_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {buses.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No buses available. Add a bus first.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -743,7 +1015,7 @@ export function RouteView() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteRouteLoading ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : (
                 'Delete'
               )}
@@ -756,32 +1028,41 @@ export function RouteView() {
         open={!!selectedRouteForAssignments}
         onOpenChange={(open) => !open && closeAssignments()}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="assignments-desc">
           <DialogHeader>
             <DialogTitle>
               Manage assignments · {selectedRouteForAssignments?.name}
             </DialogTitle>
-            <DialogDescription>
-              Assign students to this route and configure their pickup
-              locations.
+            <DialogDescription id="assignments-desc">
+              Assign students to this route. Pickup coordinates default to the
+              student&apos;s home location. Use &quot;Optimize&quot; on the route to reorder stops.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <h3 className="text-sm font-medium flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-medium">
                 <Users className="size-4" />
                 Assigned students
               </h3>
               {assignmentsLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                <div className="space-y-2 rounded-md border p-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
                 </div>
               ) : assignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No students assigned yet. Use the form below to add the first
-                  student.
-                </p>
+                <Empty className="rounded-md border border-dashed py-6">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Users className="size-6 text-muted-foreground" />
+                    </EmptyMedia>
+                    <EmptyTitle>No students on this route</EmptyTitle>
+                    <EmptyDescription>
+                      Add students below. Only unassigned students are listed.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <div className="max-h-60 overflow-y-auto rounded-md border">
                   <Table>
@@ -848,45 +1129,46 @@ export function RouteView() {
               )}
             </div>
 
-            <div className="border-t pt-4 space-y-3">
+            <div className="space-y-3 border-t pt-4">
               <h3 className="text-sm font-medium">Add student to route</h3>
               <form onSubmit={handleAssignmentSubmit} className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Student *</Label>
-                  <select
-                    value={assignmentForm.student_id || ''}
-                    onChange={(e) =>
+                  <Label htmlFor="assignment-student">Student *</Label>
+                  <Select
+                    value={assignmentForm.student_id ? String(assignmentForm.student_id) : ''}
+                    onValueChange={(v) =>
                       setAssignmentForm((f) => ({
                         ...f,
-                        student_id: e.target.value ? Number(e.target.value) : 0,
+                        student_id: v ? Number(v) : 0,
                       }))
                     }
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    required
+                    disabled={unassignedStudents.length === 0}
                   >
-                    <option value="">Select student</option>
-                    {unassignedStudents.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.full_name}
-                        {s.grade ? ` (${s.grade})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="assignment-student" aria-label="Select student to add">
+                      <SelectValue placeholder="Select student" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unassignedStudents.map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.full_name}
+                          {s.grade ? ` (${s.grade})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    Only students not already assigned to this route are listed.
+                    {unassignedStudents.length === 0
+                      ? 'All students are already assigned to this route.'
+                      : 'Pickup coordinates default to the student&apos;s home location.'}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Pickup coordinates will default to the student&apos;s saved home
-                  location if available.
-                </p>
                 <DialogFooter>
                   <Button
                     type="submit"
-                    disabled={assignmentSubmitLoading || !assignmentForm.student_id}
+                    disabled={assignmentSubmitLoading || !assignmentForm.student_id || unassignedStudents.length === 0}
                   >
                     {assignmentSubmitLoading && (
-                      <Loader2 className="size-4 animate-spin mr-2" />
+                      <Loader2 className="size-4 animate-spin mr-2" aria-hidden />
                     )}
                     Add to route
                   </Button>
@@ -931,7 +1213,7 @@ export function RouteView() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteAssignmentLoading ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" aria-hidden />
               ) : (
                 'Remove'
               )}
@@ -939,6 +1221,21 @@ export function RouteView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Card className="border-muted/50 bg-muted/30">
+        <CardContent className="flex gap-3 p-4">
+          <Info className="size-5 shrink-0 text-muted-foreground" />
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">About routes</p>
+            <ul className="list-inside list-disc space-y-0.5">
+              <li>Create a route per bus and set its time window (start/end).</li>
+              <li>Assign students from the list; pickup order can be optimized.</li>
+              <li>Use &quot;Optimize&quot; to reorder stops by proximity and reduce drive time.</li>
+              <li>Get directions to see the full route on the map.</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
