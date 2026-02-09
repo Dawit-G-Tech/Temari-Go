@@ -11,7 +11,11 @@ import { Bus } from './bus.model';
 import { RFIDCard } from './rfidCard.model';
 import { Geofence } from './geofence.model';
 
-@Table({ tableName: 'attendance', underscored: true })
+@Table({
+  tableName: 'attendance',
+  underscored: true,
+  timestamps: false, // We only have created_at; defined explicitly below
+})
 export class Attendance extends Model {
   @ForeignKey(() => Student)
   @Column({ type: DataType.INTEGER, allowNull: false })

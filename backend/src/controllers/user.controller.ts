@@ -55,9 +55,17 @@ export const updateFCMToken = async (req: Request, res: Response, next: NextFunc
 
 export const getDrivers = async (req: Request, res: Response, next: NextFunction) => {
 	try {
-		// Optionally, you could enforce admin-only here if needed.
 		const drivers = await UserService.listDrivers();
 		return res.json({ success: true, data: drivers });
+	} catch (err) {
+		return next(err);
+	}
+};
+
+export const getParents = async (req: Request, res: Response, next: NextFunction) => {
+	try {
+		const parents = await UserService.listParents();
+		return res.json({ success: true, data: parents });
 	} catch (err) {
 		return next(err);
 	}

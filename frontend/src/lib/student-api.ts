@@ -38,19 +38,34 @@ function getHeaders(accessToken?: string): Record<string, string> {
   return headers;
 }
 
+export interface StudentListFilters {
+  parentId?: number;
+  grade?: string;
+  busId?: number;
+}
+
 export const studentAPI = {
   /**
-   * Get all students (admin: all; parent: own only).
+   * Get all students (admin: all with optional filters; parent: own only).
    */
-  async getAll(accessToken?: string): Promise<Student[]> {
-    const response = await fetch(`${API_BASE_URL}/api/students`, {
-      method: 'GET',
+  async getAll(
+    accessToken?: string,
+    filters?: StudentListFilters
+  ): Promise<Student[]> {
+    const params = new URLSearchParams();
+    if (filters?.parentId != null) params.set("parentId", String(filters.parentId));
+    if (filters?.grade) params.set("grade", filters.grade);
+    if (filters?.busId != null) params.set("busId", String(filters.busId));
+    const qs = params.toString();
+    const url = qs ? `${API_BASE_URL}/api/students?${qs}` : `${API_BASE_URL}/api/students`;
+    const response = await fetch(url, {
+      method: "GET",
       headers: getHeaders(accessToken),
-      credentials: 'include',
+      credentials: "include",
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to fetch students');
+      throw new Error(err.message || "Failed to fetch students");
     }
     const result = await response.json();
     return result.data ?? result;

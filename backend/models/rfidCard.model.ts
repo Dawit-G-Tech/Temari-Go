@@ -10,7 +10,7 @@ import {
 import { Student } from './student.model';
 import { Attendance } from './attendance.model';
 
-@Table({ tableName: 'rfid_cards', underscored: true })
+@Table({ tableName: 'rfid_cards', underscored: true, timestamps: false })
 export class RFIDCard extends Model {
   @Column({ type: DataType.STRING(50), allowNull: false, unique: true })
   rfid_tag!: string;

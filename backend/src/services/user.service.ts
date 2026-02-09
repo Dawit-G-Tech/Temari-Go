@@ -62,6 +62,29 @@ export class UserService {
 			email: u.email,
 		}));
 	}
+
+	/**
+	 * List all users with the "parent" role (id, name, email only).
+	 * Used for student form parent selector (admin).
+	 */
+	static async listParents() {
+		const parentRole = await Role.findOne({ where: { name: 'parent' } });
+		if (!parentRole) {
+			return [];
+		}
+
+		const users = await User.findAll({
+			where: { role_id: parentRole.id },
+			attributes: ['id', 'name', 'email'],
+			order: [['name', 'ASC']],
+		});
+
+		return users.map((u: any) => ({
+			id: u.id,
+			name: u.name,
+			email: u.email,
+		}));
+	}
 }
 
 

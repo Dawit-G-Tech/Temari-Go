@@ -17,6 +17,10 @@ export default async function AttendancePage({
   const type = params.type as 'boarding' | 'exiting' | undefined;
   const startDate = params.startDate as string | undefined;
   const endDate = params.endDate as string | undefined;
+  const pageParam = params.page;
+  const page = pageParam ? Math.max(0, Number(pageParam) - 1) : 0;
+  const PAGE_SIZE = 20;
+  const offset = page * PAGE_SIZE;
 
   // Fetch initial data on the server
   // This will work if cookies are available, otherwise will return empty arrays
@@ -29,7 +33,8 @@ export default async function AttendancePage({
       type,
       startDate,
       endDate,
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset,
     }).catch(() => ({ total: 0, attendances: [] })) as Promise<{
       total: number;
       attendances: AttendanceRecord[];
@@ -47,6 +52,7 @@ export default async function AttendancePage({
         type,
         startDate,
         endDate,
+        page,
       }}
     />
   );
