@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from '../../models';
+import { GeofenceService } from '../services/geofence.service';
 
 const { Student, User, RFIDCard, Attendance, Payment, RouteAssignment, Route } = db;
 
@@ -81,6 +82,29 @@ export const createStudent = async (req: Request, res: Response, next: NextFunct
 			home_latitude: home_latitude ?? null,
 			home_longitude: home_longitude ?? null,
 		});
+
+		// Automatically create a home geofence when coordinates are provided.
+		// The center will initially match the student's home location and will
+		// later be refined when route pickups are optimized.
+		if (
+			home_latitude != null &&
+			home_longitude != null &&
+			home_latitude !== '' &&
+			home_longitude !== ''
+		) {
+			try {
+				await GeofenceService.createGeofence({
+					name: `${full_name} home`,
+					type: 'home',
+					latitude: Number(home_latitude),
+					longitude: Number(home_longitude),
+					student_id: student.id,
+				});
+			} catch (geofenceError) {
+				// Do not block student creation if geofence creation fails.
+				console.error('Create student home geofence error:', geofenceError);
+			}
+		}
 
 		return res.status(201).json({
 			success: true,

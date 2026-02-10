@@ -1,5 +1,6 @@
 import { db } from '../../models';
 import { getDirections, type DirectionsResult, type LatLng } from '../utils/google-maps';
+import { GeofenceService } from './geofence.service';
 const { Route, RouteAssignment, Bus, Student } = db;
 
 /** Default radius (km) to group students into the same pickup zone. ~200m. */
@@ -461,6 +462,9 @@ export class RouteService {
 				},
 			],
 		});
+
+		// Keep home geofences in sync with optimized pickups for this route.
+		await GeofenceService.syncHomeGeofencesForOptimizedRoute(id, waypoints);
 
 		return {
 			route: updatedRoute!.toJSON(),
