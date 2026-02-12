@@ -65,6 +65,7 @@ const fleetItems = [
 // Map & zones: locations + geofences as one concept (one page with tabs/sections)
 const mapItems = [
   { title: "Map & Geofences", url: "/map", icon: MapPin },
+  { title: "Live tracking", url: "/live-tracking", icon: MapPin },
 ];
 
 // Hardware: RFID lives here; assign/manage cards (distinct from Students)

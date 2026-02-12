@@ -9,7 +9,7 @@ import {
 import { User } from './user.model';
 import { Student } from './student.model';
 
-@Table({ tableName: 'payments', underscored: true })
+@Table({ tableName: 'payments', underscored: true, timestamps: false })
 export class Payment extends Model {
   @ForeignKey(() => User)
   @Column({ type: DataType.INTEGER, allowNull: false })

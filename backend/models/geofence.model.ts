@@ -12,7 +12,7 @@ import { Bus } from './bus.model';
 import { School } from './school.model';
 import { Attendance } from './attendance.model';
 
-@Table({ tableName: 'geofences', underscored: true })
+@Table({ tableName: 'geofences', underscored: true, timestamps: false })
 export class Geofence extends Model {
   @Column({ type: DataType.STRING(100), allowNull: false })
   name!: string;
