@@ -1,7 +1,6 @@
 import React from "react";
+import { SchoolView } from "@/modules/school/views/school-view";
 
-const Page = () => {
-  return <div>Schools</div>;
-};
-
-export default Page;
+export default function SchoolsPage() {
+  return <SchoolView />;
+}
