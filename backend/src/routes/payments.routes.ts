@@ -1,8 +1,17 @@
 import { Router } from 'express';
-import { getParentPayments, getStudentPayments, updatePaymentStatus } from '../controllers/payment.controller';
+import {
+  getAdminPayments,
+  getParentPayments,
+  getStudentPayments,
+  updatePaymentStatus,
+} from '../controllers/payment.controller';
 import authMiddleware from '../middlewares/auth.middleware';
+import { authorize } from '../middlewares/role.middleware';
 
 const router = Router();
+
+// Admin-only: List all payments (must be before /parent/:parentId so GET / is matched)
+router.get('/', authMiddleware, authorize('admin'), getAdminPayments);
 
 // Payment history endpoints (protected)
 router.get('/parent/:parentId', authMiddleware, getParentPayments);

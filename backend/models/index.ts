@@ -13,6 +13,7 @@ import { AlcoholTest } from './alcoholTest.model';
 import { DriverFeedback } from './driverFeedback.model';
 import { DriverRating } from './driverRating.model';
 import { Payment } from './payment.model';
+import { Invoice } from './invoice.model';
 import { Notification } from './notification.model';
 import { Route } from './route.model';
 import { RouteAssignment } from './routeAssignment.model';
@@ -37,6 +38,7 @@ export const sequelize = new Sequelize(dbConfig.url, {
     DriverFeedback,
     DriverRating,
     Payment,
+    Invoice,
     Notification,
     Route,
     RouteAssignment,
@@ -64,6 +66,7 @@ export const db = {
   DriverFeedback,
   DriverRating,
   Payment,
+  Invoice,
   Notification,
   Route,
   RouteAssignment,

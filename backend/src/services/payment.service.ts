@@ -19,6 +19,11 @@ export interface PaymentFilters {
 	offset?: number;
 }
 
+export interface AdminPaymentFilters extends PaymentFilters {
+	parentId?: number;
+	studentId?: number;
+}
+
 export class PaymentService {
 	/**
 	 * Create a new payment record
@@ -212,6 +217,60 @@ export class PaymentService {
 		const payments = await Payment.findAndCountAll({
 			where,
 			include: [
+				{
+					model: User,
+					as: 'parent',
+					attributes: ['id', 'name', 'email'],
+				},
+			],
+			order: [['timestamp', 'DESC']],
+			limit,
+			offset,
+		});
+
+		return {
+			payments: payments.rows,
+			total: payments.count,
+			limit,
+			offset,
+		};
+	}
+
+	/**
+	 * Get all payments (admin only), with optional filters
+	 */
+	static async getAllPayments(filters?: AdminPaymentFilters) {
+		const where: any = {};
+
+		if (filters?.parentId != null) {
+			where.parent_id = filters.parentId;
+		}
+		if (filters?.studentId != null) {
+			where.student_id = filters.studentId;
+		}
+		if (filters?.status) {
+			where.status = filters.status;
+		}
+		if (filters?.startDate || filters?.endDate) {
+			where.timestamp = {};
+			if (filters.startDate) {
+				where.timestamp[Op.gte] = filters.startDate;
+			}
+			if (filters.endDate) {
+				where.timestamp[Op.lte] = filters.endDate;
+			}
+		}
+
+		const limit = filters?.limit ?? 100;
+		const offset = filters?.offset ?? 0;
+
+		const payments = await Payment.findAndCountAll({
+			where,
+			include: [
+				{
+					model: Student,
+					attributes: ['id', 'full_name', 'grade'],
+				},
 				{
 					model: User,
 					as: 'parent',
