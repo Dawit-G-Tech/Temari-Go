@@ -73,11 +73,9 @@ const hardwareItems = [
   { title: "RFID Cards", url: "/rfid-cards", icon: BadgeCheck },
 ];
 
-// Billing: payments + plans as one section (one page with tabs)
-const billingItems = [
-  { title: "Billing", url: "/billing", icon: CreditCard },
+const paymentsItems = [
+  { title: "Payments", url: "/payments", icon: CreditCard },
 ];
-
 
 const settingsItems = [
   { title: "Integrations", url: "/integrations", icon: Plug },
@@ -89,7 +87,7 @@ const sidebarGroups: { label: string; items: typeof overviewItems }[] = [
   { label: "Fleet & Operations", items: fleetItems },
   { label: "Map & Geofences", items: mapItems },
   { label: "Hardware", items: hardwareItems },
-  { label: "Billing", items: billingItems },
+  { label: "Payments", items: paymentsItems },
   { label: "Settings", items: settingsItems },
 ]; 
 

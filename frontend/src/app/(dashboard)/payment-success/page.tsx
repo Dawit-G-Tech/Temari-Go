@@ -15,13 +15,13 @@ export default function PaymentSuccessPage() {
           </div>
           <h1 className="text-xl font-semibold">Payment completed</h1>
           <p className="text-sm text-muted-foreground">
-            The payment was processed successfully. You can return to Billing to
+            The payment was processed successfully. You can return to Payments to
             view the updated ledger.
           </p>
         </CardHeader>
         <CardContent className="flex justify-center">
           <Button asChild>
-            <Link href="/billing">Back to Billing</Link>
+            <Link href="/payments">Back to Payments</Link>
           </Button>
         </CardContent>
       </Card>
