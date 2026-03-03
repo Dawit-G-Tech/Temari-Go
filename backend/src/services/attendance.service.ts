@@ -100,13 +100,12 @@ export class AttendanceService {
 			},
 		});
 
-		// Also get school geofence (if exists)
-		const schoolGeofence = await Geofence.findOne({
-			where: {
-				type: 'school',
-				bus_id: bus.id,
-			},
-		});
+		// Get school geofence only by bus's school (no legacy bus_id lookup)
+		const schoolGeofence = (bus as any).school_id
+			? await Geofence.findOne({
+					where: { type: 'school', school_id: (bus as any).school_id },
+			  })
+			: null;
 
 		// Get student's home geofence
 		const homeGeofence = await Geofence.findOne({
@@ -370,13 +369,12 @@ export class AttendanceService {
 				},
 			});
 
-			// Also get school geofence (if exists)
-			const schoolGeofence = await Geofence.findOne({
-				where: {
-					type: 'school',
-					bus_id: bus.id,
-				},
-			});
+			// Get school geofence only by bus's school (no legacy bus_id lookup)
+			const schoolGeofence = (bus as any).school_id
+				? await Geofence.findOne({
+						where: { type: 'school', school_id: (bus as any).school_id },
+				  })
+				: null;
 
 			// Get student's home geofence
 			const homeGeofence = await Geofence.findOne({

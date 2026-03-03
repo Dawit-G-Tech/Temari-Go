@@ -8,16 +8,16 @@ import {
 } from 'sequelize-typescript';
 import { Bus } from './bus.model';
 
-@Table({ tableName: 'locations' })
+@Table({ tableName: 'locations', underscored: true, timestamps: false })
 export class Location extends Model {
   @ForeignKey(() => Bus)
   @Column({ type: DataType.INTEGER, allowNull: false })
   bus_id!: number;
 
-  @Column({ type: DataType.DECIMAL(10, 8), allowNull: false })
+  @Column({ type: DataType.DECIMAL(12, 10), allowNull: false })
   latitude!: number;
 
-  @Column({ type: DataType.DECIMAL(11, 8), allowNull: false })
+  @Column({ type: DataType.DECIMAL(13, 10), allowNull: false })
   longitude!: number;
 
   @Column({ type: DataType.DECIMAL(5, 2), allowNull: true })

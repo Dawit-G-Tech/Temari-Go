@@ -24,6 +24,15 @@ module.exports = {
         },
         onDelete: 'SET NULL',
       },
+      school_id: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'schools',
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
+      },
       capacity: {
         type: Sequelize.INTEGER,
         allowNull: true,

@@ -17,11 +17,10 @@ export default async function AttendancePage({
   const type = params.type as 'boarding' | 'exiting' | undefined;
   const startDate = params.startDate as string | undefined;
   const endDate = params.endDate as string | undefined;
-
-  // Set default date to today if not provided
-  const today = new Date().toISOString().split('T')[0];
-  const finalStartDate = startDate || today;
-  const finalEndDate = endDate || today;
+  const pageParam = params.page;
+  const page = pageParam ? Math.max(0, Number(pageParam) - 1) : 0;
+  const PAGE_SIZE = 20;
+  const offset = page * PAGE_SIZE;
 
   // Fetch initial data on the server
   // This will work if cookies are available, otherwise will return empty arrays
@@ -32,9 +31,10 @@ export default async function AttendancePage({
       studentId,
       busId,
       type,
-      startDate: finalStartDate,
-      endDate: finalEndDate,
-      limit: 100,
+      startDate,
+      endDate,
+      limit: PAGE_SIZE,
+      offset,
     }).catch(() => ({ total: 0, attendances: [] })) as Promise<{
       total: number;
       attendances: AttendanceRecord[];
@@ -50,8 +50,9 @@ export default async function AttendancePage({
         studentId,
         busId,
         type,
-        startDate: finalStartDate,
-        endDate: finalEndDate,
+        startDate,
+        endDate,
+        page,
       }}
     />
   );

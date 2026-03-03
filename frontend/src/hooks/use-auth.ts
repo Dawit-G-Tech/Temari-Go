@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { authClient } from '@/lib/auth-client';
 import { User } from '@/lib/auth';
 
@@ -9,12 +9,17 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const refreshUser = useCallback(async () => {
+    const currentUser = await authClient.getMe();
+    setUser(currentUser);
+    setIsAuthenticated(!!currentUser);
+    return currentUser;
+  }, []);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // First refresh the auth client state from localStorage
         authClient.refreshAuthState();
-        
         const currentUser = await authClient.getMe();
         setUser(currentUser);
         setIsAuthenticated(!!currentUser);
@@ -72,5 +77,6 @@ export const useAuth = () => {
     login,
     register,
     logout,
+    refreshUser,
   };
 };

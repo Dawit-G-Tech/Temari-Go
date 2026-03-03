@@ -174,8 +174,8 @@ export const googleCallback = [
 			const refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 			await RefreshToken.create({ 
 				token: refreshToken, 
-				expiryDate: refreshTokenExpiry, 
-				userId: user.id 
+				expiry_date: refreshTokenExpiry, 
+				user_id: user.id 
 			});
 
 			// Set cookies

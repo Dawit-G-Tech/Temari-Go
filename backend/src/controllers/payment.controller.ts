@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import crypto from 'crypto';
 import { PaymentService } from '../services/payment.service';
+import { InvoiceService } from '../services/invoice.service';
 
 const CHAPA_URL = process.env.CHAPA_URL || 'https://api.chapa.co/v1/transaction/initialize';
 const CHAPA_AUTH = process.env.CHAPA_AUTH || '';
@@ -14,7 +15,8 @@ function makeConfig(): { headers?: Record<string, string> } {
 /**
  * Initialize payment with Chapa
  * POST /api/payment/pay
- * Body: { parent_id, student_id, amount, email, first_name, last_name, currency? }
+ * Body: { parent_id, student_id, amount, email, full_name? | first_name?, last_name?, currency? }
+ * Use full_name (single field) or first_name + last_name for Chapa payer name.
  */
 export const initializePayment = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -24,13 +26,31 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
     }
 
     // Validation
-    const { parent_id, student_id, amount, email, first_name, last_name, currency } = req.body;
+    const { parent_id, student_id, amount, email, full_name, first_name, last_name, currency } = req.body;
 
-    if (!parent_id || !student_id || !amount || !email) {
+    if (!parent_id || !student_id || amount == null || amount === '' || !email) {
       return res.status(400).json({
         success: false,
         code: 'MISSING_FIELDS',
         message: 'parent_id, student_id, amount, and email are required',
+      });
+    }
+
+    const numAmount = parseFloat(amount);
+    if (Number.isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_AMOUNT',
+        message: 'amount must be a positive number',
+      });
+    }
+
+    const emailTrimmed = String(email).trim().toLowerCase();
+    if (!emailTrimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_EMAIL',
+        message: 'A valid email is required',
       });
     }
 
@@ -43,18 +63,29 @@ export const initializePayment = async (req: Request, res: Response, next: NextF
     const payment = await PaymentService.createPayment({
       parent_id: parseInt(parent_id, 10),
       student_id: parseInt(student_id, 10),
-      amount: parseFloat(amount),
+      amount: numAmount,
       chapa_transaction_id: txRef, // Store tx_ref initially, will be updated with actual transaction_id from webhook
       status: 'pending',
     });
 
+    // Chapa expects first_name and last_name; we accept full_name and split on first space
+    let chapaFirst = (first_name && String(first_name).trim().slice(0, 100)) || '';
+    let chapaLast = (last_name && String(last_name).trim().slice(0, 100)) || '';
+    if (full_name != null && String(full_name).trim()) {
+      const parts = String(full_name).trim().split(/\s+/);
+      chapaFirst = parts[0]?.slice(0, 100) || 'First';
+      chapaLast = parts.slice(1).join(' ').slice(0, 100) || 'Last';
+    }
+    if (!chapaFirst) chapaFirst = 'First';
+    if (!chapaLast) chapaLast = 'Last';
+
     // Initialize payment with Chapa
     const data = {
-      amount: amount.toString(),
-      currency: currency || 'ETB',
-      email: email,
-      first_name: first_name || 'First',
-      last_name: last_name || 'Last',
+      amount: numAmount.toString(),
+      currency: (currency && String(currency).trim()) || 'ETB',
+      email: emailTrimmed,
+      first_name: chapaFirst,
+      last_name: chapaLast,
       tx_ref: txRef,
       return_url: RETURN_URL,
     };
@@ -274,6 +305,18 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
       );
     }
 
+    // When payment completes, link to oldest pending/overdue invoice for this parent+student
+    if (paymentStatus === 'completed') {
+      try {
+        const linked = await InvoiceService.linkPaymentToInvoice(payment.id);
+        if (linked) {
+          console.log(`Payment ${payment.id} linked to invoice ${linked.id}`);
+        }
+      } catch (linkErr: any) {
+        console.warn('Could not link payment to invoice:', linkErr.message);
+      }
+    }
+
     // Reload payment to get updated data
     const updatedPayment = await PaymentService.getPaymentById(payment.id);
 
@@ -365,6 +408,64 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
  */
 export const paymentSuccess = async (_req: Request, res: Response) => {
   return res.json({ status: 'success', message: 'Payment completed successfully' });
+};
+
+/**
+ * Get all payments (admin only)
+ * GET /api/payments
+ * Query params: status, startDate, endDate, parentId, studentId, limit, offset
+ */
+export const getAdminPayments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        code: 'FORBIDDEN',
+        message: 'Only admins can list all payments',
+      });
+    }
+
+    const filters: any = {};
+
+    if (req.query.status) {
+      const status = req.query.status as string;
+      if (['pending', 'completed', 'failed'].includes(status)) {
+        filters.status = status;
+      }
+    }
+    if (req.query.startDate) {
+      filters.startDate = new Date(req.query.startDate as string);
+    }
+    if (req.query.endDate) {
+      filters.endDate = new Date(req.query.endDate as string);
+    }
+    if (req.query.parentId) {
+      filters.parentId = parseInt(req.query.parentId as string, 10);
+    }
+    if (req.query.studentId) {
+      filters.studentId = parseInt(req.query.studentId as string, 10);
+    }
+    if (req.query.limit) {
+      filters.limit = parseInt(req.query.limit as string, 10);
+    }
+    if (req.query.offset) {
+      filters.offset = parseInt(req.query.offset as string, 10);
+    }
+
+    const result = await PaymentService.getAllPayments(filters);
+
+    return res.json({
+      success: true,
+      data: result.payments,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
 };
 
 /**

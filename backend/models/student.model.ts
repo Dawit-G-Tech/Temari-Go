@@ -14,7 +14,7 @@ import { RouteAssignment } from './routeAssignment.model';
 import { Payment } from './payment.model';
 import { Geofence } from './geofence.model';
 
-@Table({ tableName: 'students' })
+@Table({ tableName: 'students', underscored: true })
 export class Student extends Model {
   @Column({ type: DataType.STRING(100), allowNull: false })
   full_name!: string;

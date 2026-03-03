@@ -6,18 +6,19 @@ import {
 	paymentWebhook,
 } from '../controllers/payment.controller';
 import authMiddleware from '../middlewares/auth.middleware';
+import { authorize } from '../middlewares/role.middleware';
 
 const router = Router();
 
-// Initialize payment (protected)
-router.post('/pay', authMiddleware, initializePayment);
+// Initialize payment (admin only — web dashboard; parents use mobile app)
+router.post('/pay', authMiddleware, authorize('admin'), initializePayment);
 
 // Chapa webhook handler (public endpoint - configured in Chapa dashboard)
 // Configure this URL in Chapa Dashboard: Settings > Webhooks > Add Webhook URL
 router.post('/webhook', paymentWebhook);
 
-// Manual payment verification (for testing/admin)
-router.get('/verify/:id', authMiddleware, verifyPayment);
+// Manual payment verification (admin only)
+router.get('/verify/:id', authMiddleware, authorize('admin'), verifyPayment);
 
 // Payment success page
 router.get('/success', paymentSuccess);

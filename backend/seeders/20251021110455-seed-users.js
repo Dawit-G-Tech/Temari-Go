@@ -24,25 +24,25 @@ module.exports = {
         name: 'Admin User',
         email: 'admin@phoenixauth.com',
         password: adminPassword,
-        roleId: adminRole,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        role_id: adminRole,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         name: 'John Doe',
         email: 'john@example.com',
         password: userPassword,
-        roleId: userRole,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        role_id: userRole,
+        created_at: new Date(),
+        updated_at: new Date()
       },
       {
         name: 'Jane Smith',
         email: 'jane@example.com',
         password: userPassword,
-        roleId: userRole,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        role_id: userRole,
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
   },

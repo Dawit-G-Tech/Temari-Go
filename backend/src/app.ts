@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import paymentRoutes from './routes/payment.routes';
 import paymentsRoutes from './routes/payments.routes';
+import invoiceRoutes from './routes/invoice.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import studentRoutes from './routes/student.routes';
 import busRoutes from './routes/bus.routes';
@@ -19,6 +20,9 @@ import driverFeedbackRoutes from './routes/driverFeedback.routes';
 import driverRatingRoutes from './routes/driverRating.routes';
 import notificationRoutes from './routes/notification.routes';
 import rfidCardRoutes from './routes/rfidCard.routes';
+import routeRoutes from './routes/route.routes';
+import routeAssignmentRoutes from './routes/routeAssignment.routes';
+import schoolRoutes from './routes/school.routes';
 
 dotenv.config();
 
@@ -58,6 +62,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/buses', busRoutes);
@@ -68,6 +73,9 @@ app.use('/api/driver-feedback', driverFeedbackRoutes);
 app.use('/api/driver-ratings', driverRatingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rfid-cards', rfidCardRoutes);
+app.use('/api/routes', routeRoutes);
+app.use('/api/route-assignments', routeAssignmentRoutes);
+app.use('/api/schools', schoolRoutes);
 
 app.use(errorMiddleware);
 

@@ -9,7 +9,7 @@ import {
 import { Route } from './route.model';
 import { Student } from './student.model';
 
-@Table({ tableName: 'route_assignments' })
+@Table({ tableName: 'route_assignments', underscored: true, timestamps: false })
 export class RouteAssignment extends Model {
   @ForeignKey(() => Route)
   @Column({ type: DataType.INTEGER, allowNull: false })
@@ -24,6 +24,10 @@ export class RouteAssignment extends Model {
 
   @Column({ type: DataType.DECIMAL(11, 8), allowNull: true })
   pickup_longitude?: number;
+
+  /** Order of this stop in the optimized route (0-based). Null if not yet optimized. */
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  pickup_order?: number;
 
   @BelongsTo(() => Route)
   route!: Route;

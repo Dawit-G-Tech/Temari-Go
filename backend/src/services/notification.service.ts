@@ -176,6 +176,7 @@ export class NotificationService {
 			alcohol_alert: 'Driver Safety Alert',
 			critical_motion_alert: 'CRITICAL: Bus Movement After Failed Test',
 			payment_confirmation: 'Payment Confirmed',
+			invoice_created: 'New Invoice',
 			missed_bus: 'Missed Bus Alert',
 			emergency: 'Emergency Alert',
 			speed_violation: 'Speed Violation Alert',
@@ -310,7 +311,7 @@ export class NotificationService {
 			}
 
 			const parents = await User.findAll({
-				where: { roleId: parentRole.id },
+				where: { role_id: parentRole.id },
 				attributes: ['id'],
 			});
 

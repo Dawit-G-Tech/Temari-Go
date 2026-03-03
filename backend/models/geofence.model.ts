@@ -9,9 +9,10 @@ import {
 } from 'sequelize-typescript';
 import { Student } from './student.model';
 import { Bus } from './bus.model';
+import { School } from './school.model';
 import { Attendance } from './attendance.model';
 
-@Table({ tableName: 'geofences' })
+@Table({ tableName: 'geofences', underscored: true, timestamps: false })
 export class Geofence extends Model {
   @Column({ type: DataType.STRING(100), allowNull: false })
   name!: string;
@@ -39,11 +40,18 @@ export class Geofence extends Model {
   @Column({ type: DataType.INTEGER, allowNull: true })
   bus_id?: number;
 
+  @ForeignKey(() => School)
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  school_id?: number;
+
   @BelongsTo(() => Student)
   student?: Student;
 
   @BelongsTo(() => Bus)
   bus?: Bus;
+
+  @BelongsTo(() => School)
+  school?: School;
 
   @HasMany(() => Attendance)
   attendances!: Attendance[];
