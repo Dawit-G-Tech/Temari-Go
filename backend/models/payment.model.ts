@@ -1,15 +1,8 @@
-import {
-  Table,
-  Column,
-  Model,
-  DataType,
-  BelongsTo,
-  ForeignKey,
-} from 'sequelize-typescript';
+import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize-typescript';
 import { User } from './user.model';
 import { Student } from './student.model';
 
-@Table({ tableName: 'payments', underscored: true, timestamps: false })
+@Table({ tableName: 'payments', underscored: true, timestamps: true })
 export class Payment extends Model {
   @ForeignKey(() => User)
   @Column({ type: DataType.INTEGER, allowNull: false })
@@ -19,11 +12,17 @@ export class Payment extends Model {
   @Column({ type: DataType.INTEGER, allowNull: false })
   student_id!: number;
 
-  @Column({ type: DataType.DECIMAL(10, 2), allowNull: false })
+  @Column({
+    type: DataType.DECIMAL(10, 2),
+    allowNull: false,
+    get() {
+      return Number(this.getDataValue('amount'));
+    },
+  })
   amount!: number;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.ENUM('pending', 'completed', 'failed'),
     allowNull: false,
     defaultValue: 'pending',
   })

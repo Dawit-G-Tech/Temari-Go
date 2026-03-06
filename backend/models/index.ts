@@ -18,6 +18,7 @@ import { Notification } from './notification.model';
 import { Route } from './route.model';
 import { RouteAssignment } from './routeAssignment.model';
 import { School } from './school.model';
+import { Device } from './device.model';
 
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env as 'development' | 'production'];
@@ -43,6 +44,7 @@ export const sequelize = new Sequelize(dbConfig.url, {
     Route,
     RouteAssignment,
     School,
+    Device,
   ],
   logging: false,
   define: {
@@ -71,4 +73,5 @@ export const db = {
   Route,
   RouteAssignment,
   School,
+  Device,
 };

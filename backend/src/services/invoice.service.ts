@@ -210,11 +210,17 @@ export class InvoiceService {
 	 * When a payment is completed, link it to the oldest pending/overdue invoice
 	 * for that parent+student and mark the invoice as paid.
 	 */
-	static async linkPaymentToInvoice(paymentId: number): Promise<InstanceType<typeof Invoice> | null> {
-		const payment = await Payment.findByPk(paymentId);
+	static async linkPaymentToInvoice(
+		paymentId: number,
+		options?: { transaction?: any }
+	): Promise<InstanceType<typeof Invoice> | null> {
+		const tx = options?.transaction;
+		const payment = await Payment.findByPk(paymentId, tx ? { transaction: tx } : undefined);
 		if (!payment || payment.status !== 'completed') return null;
 
 		const invoice = await Invoice.findOne({
+			transaction: tx,
+			lock: tx ? tx.LOCK.UPDATE : undefined,
 			where: {
 				parent_id: payment.parent_id,
 				student_id: payment.student_id,
@@ -227,7 +233,7 @@ export class InvoiceService {
 		await invoice.update({
 			status: 'paid',
 			payment_id: paymentId,
-		});
+		}, tx ? { transaction: tx } : undefined);
 		return invoice;
 	}
 

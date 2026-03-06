@@ -8,9 +8,23 @@ export class School extends Model {
   @Column({ type: DataType.TEXT, allowNull: true })
   address?: string;
 
-  @Column({ type: DataType.DECIMAL(10, 8), allowNull: true })
-  latitude?: number;
+  @Column({
+    type: DataType.DECIMAL(10, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('latitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  latitude?: number | null;
 
-  @Column({ type: DataType.DECIMAL(11, 8), allowNull: true })
-  longitude?: number;
+  @Column({
+    type: DataType.DECIMAL(11, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('longitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  longitude?: number | null;
 }

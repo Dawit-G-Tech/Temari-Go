@@ -12,25 +12,37 @@ import { Bus } from './bus.model';
 import { School } from './school.model';
 import { Attendance } from './attendance.model';
 
-@Table({ tableName: 'geofences', underscored: true, timestamps: false })
+@Table({ tableName: 'geofences', underscored: true, timestamps: true })
 export class Geofence extends Model {
   @Column({ type: DataType.STRING(100), allowNull: false })
   name!: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.ENUM('school', 'home'),
     allowNull: false,
   })
   type!: 'school' | 'home';
 
-  @Column({ type: DataType.DECIMAL(10, 8), allowNull: false })
+  @Column({
+    type: DataType.DECIMAL(10, 8),
+    allowNull: false,
+    get() {
+      return Number(this.getDataValue('latitude'));
+    },
+  })
   latitude!: number;
 
-  @Column({ type: DataType.DECIMAL(11, 8), allowNull: false })
+  @Column({
+    type: DataType.DECIMAL(11, 8),
+    allowNull: false,
+    get() {
+      return Number(this.getDataValue('longitude'));
+    },
+  })
   longitude!: number;
 
-  @Column({ type: DataType.INTEGER, allowNull: true, defaultValue: 50 })
-  radius_meters?: number;
+  @Column({ type: DataType.INTEGER, allowNull: false, defaultValue: 50 })
+  radius_meters!: number;
 
   @ForeignKey(() => Student)
   @Column({ type: DataType.INTEGER, allowNull: true })

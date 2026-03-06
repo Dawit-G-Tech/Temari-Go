@@ -8,7 +8,7 @@ import {
 } from 'sequelize-typescript';
 import { User } from './user.model';
 
-@Table({ tableName: 'notifications', underscored: true, timestamps: false })
+@Table({ tableName: 'notifications', underscored: true, timestamps: true })
 export class Notification extends Model {
   @ForeignKey(() => User)
   @Column({ type: DataType.INTEGER, allowNull: false })

@@ -10,14 +10,14 @@ import { User } from './user.model';
 
 @Table({ tableName: 'RefreshTokens', underscored: true })
 export class RefreshToken extends Model {
-  @Column({ type: DataType.STRING })
+  @Column({ type: DataType.STRING, allowNull: false })
   token!: string;
 
-  @Column({ type: DataType.DATE })
+  @Column({ type: DataType.DATE, allowNull: false })
   expiry_date!: Date;
 
   @ForeignKey(() => User)
-  @Column({ type: DataType.INTEGER })
+  @Column({ type: DataType.INTEGER, allowNull: false })
   user_id!: number;
 
   @BelongsTo(() => User)

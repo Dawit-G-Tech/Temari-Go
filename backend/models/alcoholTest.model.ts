@@ -9,7 +9,7 @@ import {
 import { User } from './user.model';
 import { Bus } from './bus.model';
 
-@Table({ tableName: 'alcohol_tests', underscored: true, timestamps: false })
+@Table({ tableName: 'alcohol_tests', underscored: true, timestamps: true })
 export class AlcoholTest extends Model {
   @ForeignKey(() => User)
   @Column({ type: DataType.INTEGER, allowNull: false })
@@ -19,7 +19,13 @@ export class AlcoholTest extends Model {
   @Column({ type: DataType.INTEGER, allowNull: true })
   bus_id?: number;
 
-  @Column({ type: DataType.DECIMAL(5, 2), allowNull: false })
+  @Column({
+    type: DataType.DECIMAL(5, 2),
+    allowNull: false,
+    get() {
+      return Number(this.getDataValue('alcohol_level'));
+    },
+  })
   alcohol_level!: number;
 
   @Column({ type: DataType.BOOLEAN, allowNull: false })
@@ -28,11 +34,25 @@ export class AlcoholTest extends Model {
   @Column({ type: DataType.DATE, allowNull: false, defaultValue: DataType.NOW })
   timestamp!: Date;
 
-  @Column({ type: DataType.DECIMAL(10, 8), allowNull: true })
-  latitude?: number;
+  @Column({
+    type: DataType.DECIMAL(10, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('latitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  latitude?: number | null;
 
-  @Column({ type: DataType.DECIMAL(11, 8), allowNull: true })
-  longitude?: number;
+  @Column({
+    type: DataType.DECIMAL(11, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('longitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  longitude?: number | null;
 
   @BelongsTo(() => User, 'driver_id')
   driver!: User;

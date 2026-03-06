@@ -26,11 +26,25 @@ export class Student extends Model {
   @Column({ type: DataType.INTEGER, allowNull: false })
   parent_id!: number;
 
-  @Column({ type: DataType.DECIMAL(10, 8), allowNull: true })
-  home_latitude?: number;
+  @Column({
+    type: DataType.DECIMAL(10, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('home_latitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  home_latitude?: number | null;
 
-  @Column({ type: DataType.DECIMAL(11, 8), allowNull: true })
-  home_longitude?: number;
+  @Column({
+    type: DataType.DECIMAL(11, 8),
+    allowNull: true,
+    get() {
+      const v = this.getDataValue('home_longitude') as unknown;
+      return v == null ? null : Number(v);
+    },
+  })
+  home_longitude?: number | null;
 
   @BelongsTo(() => User, 'parent_id')
   parent!: User;

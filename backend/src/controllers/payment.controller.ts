@@ -3,6 +3,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { PaymentService } from '../services/payment.service';
 import { InvoiceService } from '../services/invoice.service';
+import { db } from '../../models';
 
 const CHAPA_URL = process.env.CHAPA_URL || 'https://api.chapa.co/v1/transaction/initialize';
 const CHAPA_AUTH = process.env.CHAPA_AUTH || '';
@@ -197,7 +198,8 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    // Find payment by tx_ref (which we stored as chapa_transaction_id during initialization)
+    // Load payment early for verification and a fast idempotency check.
+    // The actual update/link is still done inside a DB transaction with row locking.
     const payment = await PaymentService.findPaymentByTxRef(txRef);
 
     if (!payment) {
@@ -209,13 +211,14 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
       });
     }
 
-    // Check if already processed (idempotency check)
-    // If payment is already completed/failed and webhook says the same, just acknowledge
+    // If payment is already completed/failed and webhook indicates same terminal state, acknowledge.
     if (
       (payment.status === 'completed' && status === 'success') ||
       (payment.status === 'failed' && (status === 'failed' || status === 'cancelled'))
     ) {
-      console.log(`Payment ${payment.id} already processed with status ${payment.status}, acknowledging webhook`);
+      console.log(
+        `Payment ${payment.id} already processed with status ${payment.status}, acknowledging webhook`
+      );
       return res.status(200).json({
         received: true,
         message: 'Payment already processed',
@@ -223,6 +226,30 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
         status: payment.status,
       });
     }
+
+    const { Payment } = db as any;
+    const sequelize = (db as any).sequelize;
+
+    // Process payment update + invoice linking atomically
+    const updatedPaymentId = await sequelize.transaction(async (t: any) => {
+      const payment = await Payment.findOne({
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+        where: { chapa_transaction_id: txRef },
+      });
+
+      if (!payment) {
+        console.error(`Payment not found for tx_ref: ${txRef}`);
+        return null;
+      }
+
+      // Check if already processed (idempotency check)
+      if (
+        (payment.status === 'completed' && status === 'success') ||
+        (payment.status === 'failed' && (status === 'failed' || status === 'cancelled'))
+      ) {
+        return payment.id;
+      }
 
     // Determine payment status from webhook
     let paymentStatus: 'pending' | 'completed' | 'failed' = 'pending';
@@ -289,14 +316,15 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
       }
     }
 
-    // Update payment status
-    // IMPORTANT: Keep tx_ref in chapa_transaction_id (don't overwrite with Chapa's reference)
-    await PaymentService.updatePaymentStatus(
-      payment.id,
-      paymentStatus,
-      undefined, // Don't update chapa_transaction_id - preserve the original tx_ref
-      paymentMethod
-    );
+      // Update payment status
+      // IMPORTANT: Keep tx_ref in chapa_transaction_id (don't overwrite with Chapa's reference)
+      await payment.update(
+        {
+          status: paymentStatus,
+          payment_method: paymentMethod ?? payment.payment_method,
+        },
+        { transaction: t }
+      );
 
     // Log Chapa's reference if different (for debugging/reference)
     if (chapaReference && chapaReference !== txRef) {
@@ -305,22 +333,29 @@ export const paymentWebhook = async (req: Request, res: Response, next: NextFunc
       );
     }
 
-    // When payment completes, link to oldest pending/overdue invoice for this parent+student
-    if (paymentStatus === 'completed') {
-      try {
-        const linked = await InvoiceService.linkPaymentToInvoice(payment.id);
+      // When payment completes, link to oldest pending/overdue invoice for this parent+student
+      if (paymentStatus === 'completed') {
+        const linked = await InvoiceService.linkPaymentToInvoice(payment.id, { transaction: t });
         if (linked) {
           console.log(`Payment ${payment.id} linked to invoice ${linked.id}`);
         }
-      } catch (linkErr: any) {
-        console.warn('Could not link payment to invoice:', linkErr.message);
       }
+
+      return payment.id;
+    });
+
+    if (!updatedPaymentId) {
+      // Return 200 to acknowledge receipt (idempotent - don't retry)
+      return res.status(200).json({
+        received: true,
+        message: 'Payment not found for the given transaction reference',
+      });
     }
 
     // Reload payment to get updated data
-    const updatedPayment = await PaymentService.getPaymentById(payment.id);
+    const updatedPayment = await PaymentService.getPaymentById(updatedPaymentId);
 
-    console.log(`Payment ${payment.id} updated via webhook: ${paymentStatus}`);
+    console.log(`Payment ${updatedPaymentId} updated via webhook`);
 
     // Return 200 OK to acknowledge receipt (required by Chapa)
     res.status(200).json({
