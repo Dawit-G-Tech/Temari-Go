@@ -22,7 +22,13 @@ export class Invoice extends Model {
   @Column({ type: DataType.INTEGER, allowNull: false })
   student_id!: number;
 
-  @Column({ type: DataType.DECIMAL(10, 2), allowNull: false })
+  @Column({
+    type: DataType.DECIMAL(10, 2),
+    allowNull: false,
+    get() {
+      return Number(this.getDataValue('amount'));
+    },
+  })
   amount!: number;
 
   @Column({ type: DataType.DATEONLY, allowNull: false })
@@ -32,7 +38,7 @@ export class Invoice extends Model {
   period_label!: string;
 
   @Column({
-    type: DataType.STRING,
+    type: DataType.ENUM('pending', 'paid', 'overdue', 'cancelled'),
     allowNull: false,
     defaultValue: 'pending',
   })

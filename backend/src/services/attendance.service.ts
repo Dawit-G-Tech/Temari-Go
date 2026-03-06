@@ -12,6 +12,7 @@ export interface AttendanceScanInput {
 	longitude: number;
 	vehicle_id?: string;
 	bus_id?: number;
+	event_id?: string | null;
 }
 
 export interface AttendanceScanResult {
@@ -178,6 +179,7 @@ export class AttendanceService {
 			longitude: input.longitude,
 			geofence_id: matchedGeofence?.id,
 			manual_override: false,
+			event_id: input.event_id ?? null,
 		});
 
 		// 6. Send notification to parent
@@ -251,9 +253,14 @@ export class AttendanceService {
 				continue;
 			}
 
-			// TODO: Implement persistent duplicate detection using a dedicated event_id field
-			// For now, we rely on the underlying Attendance uniqueness (if any) and allow
-			// higher layers (device) to treat re-sent records as idempotent.
+			// Persistent duplicate detection (idempotency): if event_id is provided, dedupe.
+			if (event_id) {
+				const existing = await Attendance.findOne({ where: { event_id } });
+				if (existing) {
+					results.push({ event_id, status: 'duplicate' });
+					continue;
+				}
+			}
 
 			try {
 				const scanInput: AttendanceScanInput = {
@@ -263,6 +270,7 @@ export class AttendanceService {
 					longitude: Number(input.longitude),
 					vehicle_id: input.vehicle_id,
 					bus_id: input.bus_id,
+					event_id,
 				};
 
 				await this.processScan(scanInput);
@@ -272,6 +280,16 @@ export class AttendanceService {
 					status: 'stored',
 				});
 			} catch (error: any) {
+				// Unique index on event_id can race under concurrency; treat as duplicate.
+				if (
+					event_id &&
+					(error?.name === 'SequelizeUniqueConstraintError' ||
+						error?.original?.code === '23505')
+				) {
+					results.push({ event_id, status: 'duplicate' });
+					continue;
+				}
+
 				// Map known application errors to failed status with code/message
 				if (error && error.code) {
 					results.push({

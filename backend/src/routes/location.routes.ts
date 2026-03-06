@@ -5,11 +5,12 @@ import {
 	getBusLocationHistory,
 } from '../controllers/location.controller';
 import authMiddleware from '../middlewares/auth.middleware';
+import deviceAuthMiddleware from '../middlewares/deviceAuth.middleware';
 
 const router = Router();
 
-// Public endpoint for microcontroller (can be secured with device authentication later)
-router.post('/', createLocation);
+// Microcontroller ingestion endpoint (secured via device auth)
+router.post('/', deviceAuthMiddleware, createLocation);
 
 // Protected endpoints for authenticated users (parents, admins, etc.)
 router.get('/bus/:busId/current', authMiddleware, getCurrentBusLocation);

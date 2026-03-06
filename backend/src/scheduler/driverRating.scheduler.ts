@@ -1,5 +1,7 @@
 import cron from 'node-cron';
 import { DriverRatingService } from '../services/driverRating.service';
+import { db } from '../../models';
+import { QueryTypes } from 'sequelize';
 
 /**
  * Schedule driver rating recalculation to run automatically once a month.
@@ -20,6 +22,22 @@ export function startDriverRatingScheduler(): void {
 	cron.schedule(
 		cronExpression,
 		async () => {
+			// Prevent duplicate work when running multiple backend instances.
+			// Use a stable advisory lock key for this job.
+			const LOCK_KEY = 910_000_001; // arbitrary, stable bigint-ish key
+			const [{ acquired }] = (await (db as any).sequelize.query(
+				'SELECT pg_try_advisory_lock(:key) AS acquired',
+				{
+					replacements: { key: LOCK_KEY },
+					type: QueryTypes.SELECT,
+				}
+			)) as Array<{ acquired: boolean }>;
+
+			if (!acquired) {
+				console.log('[Scheduler] Driver ratings job already running on another instance. Skipping.');
+				return;
+			}
+
 			const now = new Date();
 
 			// Previous calendar month period
@@ -42,6 +60,15 @@ export function startDriverRatingScheduler(): void {
 				console.log('[Scheduler] Driver ratings recalculation completed successfully.');
 			} catch (error) {
 				console.error('[Scheduler] Error recalculating driver ratings:', error);
+			} finally {
+				try {
+					await (db as any).sequelize.query('SELECT pg_advisory_unlock(:key)', {
+						replacements: { key: LOCK_KEY },
+						type: QueryTypes.SELECT,
+					});
+				} catch (e) {
+					console.warn('[Scheduler] Failed to release advisory lock:', e);
+				}
 			}
 		},
 		{
